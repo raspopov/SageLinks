@@ -3,6 +3,8 @@
 
 Shows and checks Windows NTFS junctions, symbolic links and shortcuts.
 
+Can be used to find, test and delete broken (orphaned) links.
+
  System requirements
 ---------------------
 
