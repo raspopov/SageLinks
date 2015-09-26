@@ -51,6 +51,8 @@
     <None Include="res\SageLinks.rc2">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="LICENSE" />
+    <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\SageLinks.ico">

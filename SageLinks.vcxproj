@@ -223,6 +223,8 @@
     <ResourceCompile Include="SageLinks.rc" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="LICENSE" />
+    <None Include="README.md" />
     <None Include="res\SageLinks.rc2" />
   </ItemGroup>
   <ItemGroup>
