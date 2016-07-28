@@ -10,20 +10,10 @@ Can be used to find, test and delete broken (orphaned) links.
 
 Windows XP, Windows Vista, Windows 7, Windows 8, Windows 10 32/64-bit.
 
-You must have Microsoft Visual C++ 2015 Redistributable installed on your computer:
-
-For 32-bit:
-
-http://download.microsoft.com/download/9/3/F/93FCF1E7-E6A4-478B-96E7-D4B285925B00/vc_redist.x86.exe
-
-For 64-bit:
-
-http://download.microsoft.com/download/9/3/F/93FCF1E7-E6A4-478B-96E7-D4B285925B00/vc_redist.x64.exe
-
  License
 ------------
 
-Copyright (C) 2015 Nikolay Raspopov <raspopov@cherubicsoft.com>
+Copyright (C) 2015-2016 Nikolay Raspopov <raspopov@cherubicsoft.com>
     
 This program is free software : you can redistribute it and / or modify
 it under the terms of the GNU General Public License as published by
