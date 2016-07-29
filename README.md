@@ -13,7 +13,7 @@ Windows XP, Windows Vista, Windows 7, Windows 8, Windows 10 32/64-bit.
  License
 ------------
 
-Copyright (C) 2015-2016 Nikolay Raspopov <raspopov@cherubicsoft.com>
+Copyright (C) 2015-2016 Nikolay Raspopov <<raspopov@cherubicsoft.com>>
     
 This program is free software : you can redistribute it and / or modify
 it under the terms of the GNU General Public License as published by
@@ -26,4 +26,4 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
 GNU General Public License for more details.
     
 You should have received a copy of the GNU General Public License
-along with this program.If not, see < http://www.gnu.org/licenses/>.
+along with this program.If not, see <http://www.gnu.org/licenses/>.
