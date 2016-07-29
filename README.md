@@ -1,3 +1,5 @@
+[![Build status](https://ci.appveyor.com/api/projects/status/xetag3g94r0rqk7m?svg=true)](https://ci.appveyor.com/project/raspopov/sagelinks)
+
  SageLinks
 ---------------------
 
