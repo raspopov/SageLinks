@@ -53,6 +53,7 @@
     </None>
     <None Include="LICENSE" />
     <None Include="README.md" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\SageLinks.ico">
