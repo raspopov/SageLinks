@@ -22,6 +22,7 @@
 #include "dep\dep.iss"
 
 [Setup]
+AppId={#MyAppName}
 AppName={#MyAppName} {#MyBitness}
 AppVersion={#MyAppVersion}
 VersionInfoVersion={#MyAppVersion}
