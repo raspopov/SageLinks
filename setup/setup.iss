@@ -1,13 +1,18 @@
-﻿#define MyAppName		    "SageLinks"
-#define MyAppURL		    "https://github.com/raspopov/SageLinks"
+﻿#if Platform == "x64"
+  #define MyBitness		  "(64-bit)"
+#else
+  #define MyBitness		  "(32-bit)"
+#endif
+
 #define MyAppExe		    "SageLinks.exe"
 #define MyAppSource		  "..\" + Platform + "\Release\" + MyAppExe
-#define MyAppId			    GetStringFileInfo( MyAppSource, INTERNAL_NAME )
+#define MyAppName			  GetStringFileInfo( MyAppSource, INTERNAL_NAME )
 #define MyAppVersion	  GetFileProductVersion( MyAppSource )
 #define MyAppCopyright	GetFileCopyright( MyAppSource )
 #define MyAppPublisher	GetFileCompany( MyAppSource )
-#define MyOutput		    LowerCase( StringChange( MyAppName + " " + MyAppVersion, " ", "_" ) )
-
+#define MyAppURL		    GetStringFileInfo( MyAppSource, "Comments" )
+#define MyOutput		    LowerCase( StringChange( MyAppName + " " + MyAppVersion + " " + MyBitness, " ", "_" ) )
+          
 #include "vc_redist.iss"
 
 #include "idp\lang\russian.iss"
@@ -17,17 +22,16 @@
 #include "dep\dep.iss"
 
 [Setup]
-AppId={#MyAppId}
-AppName={#MyAppName}
+AppName={#MyAppName} {#MyBitness}
 AppVersion={#MyAppVersion}
 VersionInfoVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
-AppMutex=Global\{#MyAppId}
+AppMutex=Global\{#MyAppName}
 AppCopyright={#MyAppCopyright}
-DefaultDirName={pf}\{#MyAppPublisher}\{#MyAppId}
+DefaultDirName={pf}\{#MyAppPublisher}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 OutputDir=..\{#Platform}\Release
 OutputBaseFilename={#MyOutput}
@@ -40,7 +44,7 @@ UninstallDisplayIcon={app}\{#MyAppExe},0
 DirExistsWarning=no
 WizardImageFile=compiler:WizModernImage-IS.bmp
 WizardSmallImageFile=compiler:WizModernSmallImage-IS.bmp
-SetupMutex=Global\Setup_{#MyAppId}
+SetupMutex=Global\Setup_{#MyAppName}
 OutputManifestFile=Setup-Manifest.txt
 #if Platform == "x64"
 ArchitecturesInstallIn64BitMode=x64
