@@ -1,7 +1,7 @@
 ﻿#if Platform == "x64"
-  #define MyBitness		  "(64-bit)"
+  #define MyBitness		  "64-bit"
 #else
-  #define MyBitness		  "(32-bit)"
+  #define MyBitness		  "32-bit"
 #endif
 
 #define MyAppExe		    "SageLinks.exe"
