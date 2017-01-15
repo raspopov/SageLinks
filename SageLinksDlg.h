@@ -1,7 +1,7 @@
 /*
 This file is part of SageLinks
 
-Copyright (C) 2015 Nikolay Raspopov <raspopov@cherubicsoft.com>
+Copyright (C) 2015-2017 Nikolay Raspopov <raspopov@cherubicsoft.com>
 
 This program is free software : you can redistribute it and / or modify
 it under the terms of the GNU General Public License as published by
@@ -40,7 +40,7 @@ protected:
 	class ATL_NO_VTABLE CLink
 	{
 	public:
-		inline CLink(LinkType nType, HICON hIcon, const CString& sSource, const CString& sTarget, BOOL bResult)
+		inline CLink(LinkType nType = LinkType::Unknown, HICON hIcon = NULL, const CString& sSource = CString(), const CString& sTarget = CString(), BOOL bResult = FALSE)
 			: m_nType	( nType )
 			, m_hIcon	( hIcon )
 			, m_sSource	( sSource )
@@ -60,6 +60,7 @@ protected:
 		CString		m_sTarget;
 		BOOL		m_bResult;
 	};
+	typedef CList< CLink* > CLinkList;
 
 	HICON				m_hIcon;
 	CImageList			m_oImages;
@@ -81,6 +82,7 @@ protected:
 	CString				m_sOldStatus;
 	HANDLE				m_hThread;
 	CCriticalSection	m_pSection;
+	CLinkList			m_pIncoming;		// Incoming items
 	CEvent				m_pFlag;
 	CMFCEditBrowseCtrl	m_wndBrowse;
 	CRect				m_rcInitial;
@@ -93,6 +95,7 @@ protected:
 	void SortList();
 	static int CALLBACK SortFunc( LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort );
 	void ClearList();
+	void OnNewItem(CLink* pLink);
 
 	virtual BOOL OnInitDialog();
 	virtual void DoDataExchange( CDataExchange* pDX );	// DDX/DDV support
@@ -100,7 +103,6 @@ protected:
 
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
-	afx_msg LRESULT OnNewItem(WPARAM wParam, LPARAM lParam);
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg void OnDestroy();
 	afx_msg void OnSize( UINT nType, int cx, int cy );
@@ -111,5 +113,3 @@ protected:
 
 	DECLARE_MESSAGE_MAP()
 };
-
-#define WM_NEW_ITEM		( WM_APP + 1 )

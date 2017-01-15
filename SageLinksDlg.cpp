@@ -1,7 +1,9 @@
+// This is an open source non-commercial project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 /*
 This file is part of SageLinks
 
-Copyright (C) 2015 Nikolay Raspopov <raspopov@cherubicsoft.com>
+Copyright (C) 2015-2017 Nikolay Raspopov <raspopov@cherubicsoft.com>
 
 This program is free software : you can redistribute it and / or modify
 it under the terms of the GNU General Public License as published by
@@ -136,6 +138,68 @@ protected:
 	CAutoVectorPtr< PCUITEMID_CHILD >	m_pID;		// File ItemID array
 };
 
+CString ErrorMessage(HRESULT hr)
+{
+	static const LPCTSTR szModules [] =
+	{
+		_T("user32.dll"),
+		_T("netapi32.dll"),
+		_T("netmsg.dll"),
+		_T("netevent.dll"),
+		_T("spmsg.dll"),
+		_T("wininet.dll"),
+		_T("ntdll.dll"),
+		_T("ntdsbmsg.dll"),
+		_T("mprmsg.dll"),
+		_T("IoLogMsg.dll"),
+		_T("NTMSEVT.DLL"),
+		_T("ws2_32.dll")
+	};
+
+	CString sError;
+
+	if ( hr == ERROR_EXTENDED_ERROR )
+	{
+		CString sDescription, sProvider;
+		DWORD err = hr;
+		DWORD result = WNetGetLastError( &err, sDescription.GetBuffer( 1024 ), 1024, sProvider.GetBuffer( 256 ), 256 );
+		sDescription.ReleaseBuffer();
+		sProvider.ReleaseBuffer();
+		if ( NO_ERROR == result )
+		{
+			sError = sDescription;
+		}
+	} 
+
+	if ( sError.IsEmpty() )
+	{
+		LPTSTR lpszTemp = NULL;
+		FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, hr, 0, (LPTSTR)&lpszTemp, 0, NULL );
+		for ( int i = 0; ! lpszTemp && i < _countof( szModules ); ++i )
+		{
+			if ( HMODULE hModule = LoadLibraryEx( szModules[ i ], NULL, LOAD_LIBRARY_AS_DATAFILE ) )
+			{			
+				FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_HMODULE, hModule, hr, 0, (LPTSTR)&lpszTemp, 0, NULL );
+				FreeLibrary( hModule );
+			}
+		}
+
+		if ( lpszTemp )
+		{
+			sError = lpszTemp;
+			LocalFree( lpszTemp );
+		}
+	}
+
+	if ( sError.IsEmpty() )
+	{
+		sError.LoadString( IDS_UNKNOWN_ERROR );
+	}
+
+	sError.AppendFormat( _T(" (0x%08x)"), hr );
+	return sError;
+}
+
 #define ID_SHELL_MENU_MIN 40000
 #define ID_SHELL_MENU_MAX 41000
 
@@ -195,7 +259,6 @@ void CSageLinksDlg::DoDataExchange(CDataExchange* pDX)
 BEGIN_MESSAGE_MAP(CSageLinksDlg, CDialog)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
-	ON_MESSAGE( WM_NEW_ITEM, &CSageLinksDlg::OnNewItem )
 	ON_WM_TIMER()
 	ON_WM_DESTROY()
 	ON_WM_SIZE()
@@ -401,10 +464,21 @@ void CSageLinksDlg::Thread()
 
 				if ( ( wfa.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT ) != 0 )
 				{
+					LinkType nType = LinkType::Unknown;
+					switch ( wfa.dwReserved0 )
+					{
+					case IO_REPARSE_TAG_MOUNT_POINT:
+						nType = LinkType::Junction;
+						break;
+					case IO_REPARSE_TAG_SYMLINK:
+						nType = LinkType::Symbolic;
+						break;
+					}
+
 					// Reparse point
 					const CString sPath( sDir + _T( "\\" ) + wfa.cFileName );
 					CString sTarget;
-					LinkType nType;
+					
 					BOOL bResult = FALSE;
 					HANDLE hFile = CreateFile( sPath, FILE_READ_ATTRIBUTES,
 						FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING,
@@ -467,34 +541,33 @@ void CSageLinksDlg::Thread()
 								}
 							}
 							else
+							{
 								TRACE( "%s : No Target\n", (LPCSTR)CT2A( (LPCTSTR)sPath ) );
+							}
 						}
 						else
+						{
+							sTarget = ErrorMessage( GetLastError() );
 							TRACE( "%s : IO Error %d\n", (LPCSTR)CT2A( (LPCTSTR)sPath ), GetLastError() );
+						}
 
 						CloseHandle( hFile );
 					}
 					else
-						TRACE( "%s : Open Error %d\n", (LPCSTR)CT2A( (LPCTSTR)sPath ), GetLastError() );
-
-					switch ( wfa.dwReserved0 )
 					{
-					case IO_REPARSE_TAG_MOUNT_POINT:
-						nType = LinkType::Junction;
-						break;
-					case IO_REPARSE_TAG_SYMLINK:
-						nType = LinkType::Symbolic;
-						break;
-					default:
-						nType = LinkType::Unknown;
+						sTarget = ErrorMessage( GetLastError() );
+						TRACE( "%s : Open Error %d\n", (LPCSTR)CT2A( (LPCTSTR)sPath ), GetLastError() );
 					}
 
-					SHFILEINFO sfi = {};
-					SHGetFileInfo( bResult ? sTarget : sPath, 0, &sfi, sizeof( sfi ), SHGFI_ICON | SHGFI_SMALLICON );
+					if ( nType != LinkType::Unknown )
+					{
+						SHFILEINFO sfi = {};
+						SHGetFileInfo( bResult ? sTarget : sPath, 0, &sfi, sizeof( sfi ), SHGFI_ICON | SHGFI_SMALLICON );
 
-					PostMessage( WM_NEW_ITEM, 0, (LPARAM)new CLink( nType, sfi.hIcon, sPath, sTarget, bResult ) );
+						CSingleLock oLock( &m_pSection, TRUE );
 
-					Sleep( 100 );
+						m_pIncoming.AddTail( new CLink( nType, sfi.hIcon, sPath, sTarget, bResult ) );
+					}
 				}
 				else if ( ( wfa.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY ) != 0 )
 				{
@@ -511,6 +584,8 @@ void CSageLinksDlg::Thread()
 						const CString sPath( sDir + _T( "\\" ) + wfa.cFileName );
 						CString sTarget;
 						BOOL bResult = FALSE;
+
+						LinkType nType = LinkType::Shortcut;
 
 						CComPtr< IShellLink > pShellLink;
 						if ( SUCCEEDED( hres = pShellLink.CoCreateInstance( CLSID_ShellLink ) ) )
@@ -601,18 +676,44 @@ void CSageLinksDlg::Thread()
 										bResult = TRUE;
 										TRACE( "%s : Non-file shell link\n", (LPCSTR)CT2A( (LPCTSTR)sPath ) );
 									}
+									else if ( hres == S_FALSE )
+									{
+										// Unknown shortcut type
+										nType = LinkType::Unknown;
+									}
+									else
+									{
+										sTarget = ErrorMessage( hres );
+										TRACE( "%s : Failed GetIDList()\n", (LPCSTR)CT2A( (LPCTSTR)sPath ) );
+									}
+								}
+								else
+								{
+									sTarget = ErrorMessage( hres );
+									TRACE( "%s : Failed GetPath()\n", (LPCSTR)CT2A( (LPCTSTR)sPath ) );
 								}
 							}
 							else
+							{
+								sTarget = ErrorMessage( hres );
 								TRACE( "%s : Bad shell link\n", (LPCSTR)CT2A( (LPCTSTR)sPath ) );
+							}
+						}
+						else
+						{
+							sTarget = ErrorMessage( hres );
+							TRACE( "%s : Failed CoCreateInstance()\n", (LPCSTR)CT2A( (LPCTSTR)sPath ) );
 						}
 
-						SHFILEINFO sfi = {};
-						SHGetFileInfo( sPath, 0, &sfi, sizeof( sfi ), SHGFI_ICON | SHGFI_SMALLICON );
+						if ( nType != LinkType::Unknown )
+						{
+							SHFILEINFO sfi = {};
+							SHGetFileInfo( sPath, 0, &sfi, sizeof( sfi ), SHGFI_ICON | SHGFI_SMALLICON );
 
-						PostMessage( WM_NEW_ITEM, 0, (LPARAM)new CLink( LinkType::Shortcut, sfi.hIcon, sPath, sTarget, bResult ) );
+							CSingleLock oLock( &m_pSection, TRUE );
 
-						Sleep( 100 );
+							m_pIncoming.AddTail( new CLink( nType, sfi.hIcon, sPath, sTarget, bResult ) );
+						}
 					}
 				}
 			}
@@ -628,22 +729,18 @@ void CSageLinksDlg::Thread()
 	if ( fnWow64RevertWow64FsRedirection ) fnWow64RevertWow64FsRedirection( pRedir );
 #endif
 
-	Sleep( 500 );
-
 	CSingleLock oLock( &m_pSection, TRUE );
 
 	m_oDirs.RemoveAll();
 	m_sStatus.Empty();
 
-	PostMessage( WM_NEW_ITEM );
+	m_pIncoming.AddTail( new CLink() );
 }
 
-LRESULT CSageLinksDlg::OnNewItem(WPARAM /*wParam*/, LPARAM lParam)
+void CSageLinksDlg::OnNewItem(CLink* pLink)
 {
-	if ( lParam )
+	if ( pLink->m_nType != LinkType::Unknown )
 	{
-		const CLink* pLink = (const CLink*)lParam;
-
 		const BOOL bIsLastVisible = ( m_nTotal == 0 ) || (BOOL)ListView_IsItemVisible( m_wndList.GetSafeHwnd(), m_nTotal - 1 );
 
 		const LVITEM itSource = { LVIF_IMAGE | LVIF_TEXT | LVIF_PARAM, m_nTotal, COL_SOURCE, 0, 0, (LPTSTR)(LPCTSTR)pLink->m_sSource, 0,
@@ -671,6 +768,8 @@ LRESULT CSageLinksDlg::OnNewItem(WPARAM /*wParam*/, LPARAM lParam)
 	}
 	else
 	{
+		delete pLink;
+
 		// Done
 		CString sOk;
 		sOk.LoadString( IDS_START );
@@ -683,8 +782,6 @@ LRESULT CSageLinksDlg::OnNewItem(WPARAM /*wParam*/, LPARAM lParam)
 		// Clean-up
 		Stop();
 	}
-
-	return 0;
 }
 
 void CSageLinksDlg::OnTimer( UINT_PTR nIDEvent )
@@ -692,6 +789,11 @@ void CSageLinksDlg::OnTimer( UINT_PTR nIDEvent )
 	CString sStatus;
 	{
 		CSingleLock oLock( &m_pSection, TRUE );
+
+		while ( ! m_pIncoming.IsEmpty() )
+		{
+			OnNewItem( m_pIncoming.RemoveHead() );
+		}
 
 		sStatus = m_sStatus;
 	}
@@ -707,12 +809,9 @@ void CSageLinksDlg::OnTimer( UINT_PTR nIDEvent )
 		}
 	}
 
-	static int nSortCounter = 0;
-	if ( m_bSort && ++ nSortCounter > 4 )
+	if ( m_bSort )
 	{
-		nSortCounter = 0;
 		m_bSort = FALSE;
-
 		SortList();
 	}
 
@@ -943,6 +1042,13 @@ int CALLBACK CSageLinksDlg::SortFunc( LPARAM lParam1, LPARAM lParam2, LPARAM lPa
 
 void CSageLinksDlg::ClearList()
 {
+	CSingleLock oLock( &m_pSection, TRUE );
+
+	while ( ! m_pIncoming.IsEmpty() )
+	{
+		delete m_pIncoming.RemoveHead();
+	}
+
 	for ( int i = 0; i < m_nTotal; ++i )
 	{
 		delete (CLink*)m_wndList.GetItemData( i );

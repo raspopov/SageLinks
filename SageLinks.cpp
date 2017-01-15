@@ -1,7 +1,9 @@
+// This is an open source non-commercial project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 /*
 This file is part of SageLinks
 
-Copyright (C) 2015 Nikolay Raspopov <raspopov@cherubicsoft.com>
+Copyright (C) 2015-2017 Nikolay Raspopov <raspopov@cherubicsoft.com>
 
 This program is free software : you can redistribute it and / or modify
 it under the terms of the GNU General Public License as published by
@@ -52,6 +54,8 @@ BOOL CSageLinksApp::InitInstance()
 	InitCommonControlsEx( &InitCtrls );
 
 	CWinApp::InitInstance();
+
+	AfxOleInit();
 
 	AfxEnableControlContainer();
 
