@@ -4,22 +4,21 @@
   #define MyBitness		  "32-bit"
 #endif
 
-#define MyAppExe		    "SageLinks.exe"
-#define MyAppSource		  "..\" + Platform + "\Release\" + MyAppExe
+#define MyAppExe		    ExtractFileName( TargetPath )
+#define MyAppSource		  ( TargetPath )
 #define MyAppName			  GetStringFileInfo( MyAppSource, INTERNAL_NAME )
 #define MyAppVersion	  GetFileProductVersion( MyAppSource )
 #define MyAppCopyright	GetFileCopyright( MyAppSource )
 #define MyAppPublisher	GetFileCompany( MyAppSource )
 #define MyAppURL		    GetStringFileInfo( MyAppSource, "Comments" )
+#define MyOutputDir		  ExtractFileDir( TargetPath )
 #define MyOutput		    LowerCase( StringChange( MyAppName + " " + MyAppVersion + " " + MyBitness, " ", "_" ) )
-          
-#include "vc_redist.iss"
-
+         
 #include "idp\lang\russian.iss"
 #include "idp\idp.iss"
-
 #include "dep\lang\russian.iss"
 #include "dep\dep.iss"
+#include "vcredist.iss"
 
 [Setup]
 AppId={#MyAppName}
@@ -34,7 +33,7 @@ AppMutex=Global\{#MyAppName}
 AppCopyright={#MyAppCopyright}
 DefaultDirName={pf}\{#MyAppPublisher}\{#MyAppName}
 DefaultGroupName={#MyAppName}
-OutputDir=..\{#Platform}\Release
+OutputDir={#MyOutputDir}
 OutputBaseFilename={#MyOutput}
 Compression=lzma2/ultra64
 SolidCompression=yes
@@ -61,7 +60,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "{#MyAppSource}"; DestDir: "{app}"; Flags: replacesameversion uninsrestartdelete
-Source: "..\ReadMe.md"; DestName: "ReadMe.txt"; DestDir: "{app}"; Flags: replacesameversion uninsrestartdelete
+Source: "..\README.md"; DestName: "ReadMe.txt"; DestDir: "{app}"; Flags: replacesameversion uninsrestartdelete
 Source: "..\LICENSE"; DestName: "License.txt"; DestDir: "{app}"; Flags: replacesameversion uninsrestartdelete
 
 [Icons]
@@ -88,29 +87,11 @@ Name: "{localappdata}\{#MyAppPublisher}"; Type: dirifempty
 
 [Code]
 procedure InitializeWizard();
-var
-  bWork: Boolean;
 begin
-  bWork := False;
 
-  if Not (FileExists(ExpandConstant('{sys}\mfc140u.dll')) and FileExists(ExpandConstant('{sys}\vcruntime140.dll'))) then begin
-  #if Platform == "Win32"
-    if ( not MsiProduct( '{#vcredist_32_productcode}' ) ) then begin
-      AddProduct( '{#vcredist_32_exe}', '/quiet /norestart', '{#vcredist_32_title}', '{#vcredist_32_url}', false, false, true );
-      bWork := True;
-    end;
-  #endif
-  #if Platform == "x64"
-    if ( not MsiProduct( '{#vcredist_64_productcode}' ) ) then begin
-      AddProduct( '{#vcredist_64_exe}', '/quiet /norestart', '{#vcredist_64_title}', '{#vcredist_64_url}', false, false, true );
-      bWork := True;
-    end;
-  #endif
-  end;
-
-  if bWork then begin
+  if InstallVCRedist() then begin
     idpDownloadAfter( wpReady );
     idpSetDetailedMode( True );
   end;
-end;
 
+end;

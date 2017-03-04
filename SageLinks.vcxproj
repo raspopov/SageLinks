@@ -101,11 +101,9 @@
       <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <MinimalRebuild>false</MinimalRebuild>
-      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <GenerateDebugInformation>Debug</GenerateDebugInformation>
       <AdditionalDependencies>mpr.lib</AdditionalDependencies>
     </Link>
     <Midl>
@@ -130,7 +128,6 @@
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <GenerateDebugInformation>Debug</GenerateDebugInformation>
       <AdditionalDependencies>mpr.lib</AdditionalDependencies>
     </Link>
     <Midl>
@@ -153,8 +150,6 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
-      <DebugInformationFormat>None</DebugInformationFormat>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <OmitFramePointers>true</OmitFramePointers>
@@ -162,7 +157,6 @@
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <GenerateDebugInformation>No</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <SetChecksum>true</SetChecksum>
@@ -184,7 +178,7 @@
       <Message>Building setup...</Message>
       <Command>for /r %%i in (*iscc.exe) do set iscc="%%i"
 if "%iscc%"=="" ( echo Inno Setup not found! &amp;&amp; exit /b 1 )
-%iscc% /DPlatform=$(Platform) $(SolutionDir)setup\setup.iss</Command>
+%iscc% "/DPlatform=$(Platform)" "/DTargetPath=$(TargetPath)" "$(SolutionDir)setup\setup.iss"</Command>
     </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -199,11 +193,10 @@ if "%iscc%"=="" ( echo Inno Setup not found! &amp;&amp; exit /b 1 )
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <OmitFramePointers>true</OmitFramePointers>
-      <DebugInformationFormat>None</DebugInformationFormat>
+      <StringPooling>true</StringPooling>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <GenerateDebugInformation>No</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>mpr.lib</AdditionalDependencies>
@@ -224,7 +217,7 @@ if "%iscc%"=="" ( echo Inno Setup not found! &amp;&amp; exit /b 1 )
       <Message>Building setup...</Message>
       <Command>for /r %%i in (*iscc.exe) do set iscc="%%i"
 if "%iscc%"=="" ( echo Inno Setup not found! &amp;&amp; exit /b 1 )
-%iscc% /DPlatform=$(Platform) $(SolutionDir)setup\setup.iss</Command>
+%iscc% "/DPlatform=$(Platform)" "/DTargetPath=$(TargetPath)" "$(SolutionDir)setup\setup.iss"</Command>
     </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemGroup>
