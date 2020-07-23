@@ -30,7 +30,7 @@ static char THIS_FILE[] = __FILE__;
 #define new DEBUG_NEW
 #endif
 
-#define CX_ICON		20	// pixels
+#define CX_ICON		22	// pixels
 
 // Column numbers
 
@@ -42,14 +42,13 @@ static char THIS_FILE[] = __FILE__;
 // CSageLinksDlg dialog
 
 CSageLinksDlg::CSageLinksDlg(CWnd* pParent /*=NULL*/)
-	: CDialogExSized	( IDD_SAGELINKS_DIALOG, pParent )
-	, m_sPath	( theApp.GetProfileString( OPT_SECTION, OPT_PATH, _T("C:\\") ) )
-	, m_hIcon	( AfxGetApp()->LoadIcon( IDR_MAINFRAME ) )
-	, m_hThread	( nullptr )
-	, m_pFlag	( FALSE, TRUE )
-	, m_nTotal	( 0 )
-	, m_nBad	( 0 )
-	, m_bSort	( FALSE )
+	: CDialogExSized	( IDD, pParent )
+	, m_sPath			( theApp.GetProfileString( OPT_SECTION, OPT_PATH, _T("C:\\") ) )
+	, m_hIcon			( AfxGetApp()->LoadIcon( IDR_MAINFRAME ) )
+	, m_hThread			( nullptr )
+	, m_pFlag			( FALSE, TRUE )
+	, m_nBad			( 0 )
+	, m_nSort			( 0 )
 	, m_nImageSuccess	( 0 )
 	, m_nImageError		( 0 )
 	, m_nImageUnknown	( 0 )
@@ -76,10 +75,12 @@ BEGIN_MESSAGE_MAP(CSageLinksDlg, CDialogExSized)
 	ON_WM_TIMER()
 	ON_WM_DESTROY()
 	ON_WM_SIZE()
-	ON_WM_GETMINMAXINFO()
 	ON_NOTIFY( NM_DBLCLK, IDC_LIST, &CSageLinksDlg::OnNMDblclkList )
 	ON_NOTIFY( NM_RCLICK, IDC_LIST, &CSageLinksDlg::OnNMRClickList )
 	ON_NOTIFY( HDN_ITEMCLICK, 0, &CSageLinksDlg::OnHdnItemclickList )
+	ON_NOTIFY( LVN_GETDISPINFO, IDC_LIST, &CSageLinksDlg::OnLvnGetdispinfoList )
+	ON_NOTIFY( LVN_ODCACHEHINT, IDC_LIST, &CSageLinksDlg::OnLvnOdcachehintList )
+	ON_NOTIFY( LVN_ODFINDITEM, IDC_LIST, &CSageLinksDlg::OnLvnOdfinditemList )
 END_MESSAGE_MAP()
 
 // CSageLinksDlg message handlers
@@ -91,8 +92,6 @@ BOOL CSageLinksDlg::OnInitDialog()
 	SetIcon( m_hIcon, TRUE );		// Set big icon
 	SetIcon( m_hIcon, FALSE );		// Set small icon
 
-	GetWindowRect( m_rcInitial );
-
 	m_oImages.Create( 16, 16, ILC_COLOR32 | ILC_MASK, 0, 100 );
 	m_nImageSuccess = m_oImages.Add( (HICON)LoadImage( AfxGetResourceHandle(), MAKEINTRESOURCE( IDI_RESULT_SUCCESS ), IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR | LR_SHARED ) );
 	m_nImageError = m_oImages.Add( (HICON)LoadImage( AfxGetResourceHandle(), MAKEINTRESOURCE( IDI_RESULT_ERROR ), IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR | LR_SHARED ) );
@@ -101,29 +100,33 @@ BOOL CSageLinksDlg::OnInitDialog()
 	m_nImageJunction = m_oImages.Add( (HICON)LoadImage( AfxGetResourceHandle(), MAKEINTRESOURCE( IDI_JUNCTION ), IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR | LR_SHARED ) );
 	m_nImageShortcut = m_oImages.Add( (HICON)LoadImage( AfxGetResourceHandle(), MAKEINTRESOURCE( IDI_SHORTCUT ), IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR | LR_SHARED ) );
 
+	ASSERT( m_wndList.GetStyle() & LVS_OWNERDATA );
 	m_wndList.SetImageList( &m_oImages, LVSIL_SMALL );
 	m_wndList.SetExtendedStyle( m_wndList.GetExtendedStyle() | LVS_EX_DOUBLEBUFFER | LVS_EX_FULLROWSELECT | LVS_EX_LABELTIP | LVS_EX_SUBITEMIMAGES );
 
-	CRect rc;
-	m_wndList.GetClientRect( &rc );
-	const int width = ( rc.Width() - CX_ICON - CX_ICON - GetSystemMetrics( SM_CXVSCROLL ) - 5 ) / 2;
-	m_wndList.InsertColumn( COL_SOURCE, _T( "Source" ), LVCFMT_LEFT, width );
-	m_wndList.InsertColumn( COL_TYPE, _T( "" ), LVCFMT_CENTER, CX_ICON );
-	m_wndList.InsertColumn( COL_TARGET, _T( "Target" ), LVCFMT_LEFT, width );
+	m_wndList.InsertColumn( COL_SOURCE, _T( "Source" ), LVCFMT_LEFT, 100 );
+	m_wndList.InsertColumn( COL_TYPE,   _T( "" ), LVCFMT_CENTER, CX_ICON );
+	m_wndList.InsertColumn( COL_TARGET, _T( "Target" ), LVCFMT_LEFT, 100);
 	m_wndList.InsertColumn( COL_RESULT, _T( "" ), LVCFMT_CENTER, CX_ICON );
 
 	HDITEM it = { HDI_FORMAT };
 	m_wndList.GetHeaderCtrl()->GetItem( COL_RESULT, &it );
 	it.fmt |= HDF_SORTDOWN;
 	m_wndList.GetHeaderCtrl()->SetItem( COL_RESULT, &it );
+	m_nSort = COL_RESULT + 1;
 
 	m_wndBrowse.SetWindowText( m_sPath );
 
-	RestoreWindowPlacement();
+	if ( ( GetKeyState( VK_SHIFT ) & 0x8000 ) == 0 )
+	{
+		RestoreWindowPlacement();
+	}
 
-	SetTimer( 100, 200, nullptr );
+	SetTimer( ID_TIMER, 100, nullptr );
 
 	Start();
+
+	Resize();
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -192,82 +195,68 @@ unsigned __stdcall CSageLinksDlg::ThreadStub(void* param)
 	return 0;
 }
 
-void CSageLinksDlg::OnNewItem(CLink* pLink)
+void CSageLinksDlg::OnNewItem(CLink* link)
 {
-	if ( pLink->m_nType != LinkType::Unknown )
+	CSingleLock oLock( &m_pSection, TRUE );
+
+	m_pList.emplace_back( link );
+
+	if ( ! link->m_bResult )
 	{
-		const BOOL bIsLastVisible = ( m_nTotal == 0 ) || (BOOL)ListView_IsItemVisible( m_wndList.GetSafeHwnd(), m_nTotal - 1 );
+		++m_nBad;
+	}
+}
 
-		const LVITEM itSource = { LVIF_IMAGE | LVIF_TEXT | LVIF_PARAM, m_nTotal, COL_SOURCE, 0, 0, (LPTSTR)(LPCTSTR)pLink->m_sSource, 0,
-			( pLink->m_hIcon ? m_oImages.Add( pLink->m_hIcon ) : m_nImageUnknown ), (LPARAM)pLink };
-		const int index = m_wndList.InsertItem( &itSource );
-		++ m_nTotal;
-		if ( ! pLink->m_bResult ) ++ m_nBad;
+void CSageLinksDlg::OnTimer(UINT_PTR nIDEvent)
+{
+	CSingleLock oLock( &m_pSection, TRUE );
 
-		const LVITEM itType = { LVIF_IMAGE, index, COL_TYPE, 0, 0, nullptr, 0,
-			( ( pLink->m_nType == LinkType::Symbolic ) ? m_nImageSymbolic :
-			( ( pLink->m_nType == LinkType::Junction ) ? m_nImageJunction :
-			( ( pLink->m_nType == LinkType::Shortcut ) ? m_nImageShortcut : m_nImageUnknown ) ) ) };
-		m_wndList.SetItem( &itType );
+	const UINT nOldTotal = m_wndList.GetItemCount();
+	const BOOL bIsLastVisible = ( nOldTotal == 0 ) || (BOOL)ListView_IsItemVisible( m_wndList.GetSafeHwnd(), nOldTotal - 1 );
 
-		const LVITEM itTarget = { LVIF_TEXT, index, COL_TARGET, 0, 0, (LPTSTR)(LPCTSTR)pLink->m_sTarget };
-		m_wndList.SetItem( &itTarget );
+	const UINT nTotal = m_pList.size();
+	if ( nOldTotal != nTotal )
+	{
+		SortList();
 
-		const LVITEM itResult = { LVIF_IMAGE, index, COL_RESULT, 0, 0, nullptr, 0, pLink->m_bResult ? m_nImageSuccess : m_nImageError };
-		m_wndList.SetItem( &itResult );
-
-		m_bSort = TRUE;
+		m_wndList.SetItemCountEx( nTotal, LVSICF_NOINVALIDATEALL | LVSICF_NOSCROLL );
 
 		if ( bIsLastVisible )
-			m_wndList.EnsureVisible( m_nTotal - 1, FALSE );
+		{
+			m_wndList.EnsureVisible( nTotal - 1, TRUE );
+		}
 	}
-	else
-	{
-		delete pLink;
 
+	if ( m_sStatus != m_sOldStatus )
+	{
+		m_sOldStatus = m_sStatus;
+
+		if ( ! m_sStatus.IsEmpty() )
+		{
+			CString sText;
+			sText.Format( IDS_WORK, (LPCTSTR)m_sStatus );
+			m_wndStatus.SetWindowText( sText );
+		}
+	}
+
+	if ( nIDEvent == ID_DONE )
+	{
 		// Done
+		m_oDirs.RemoveAll();
+		m_sStatus.Empty();
+
 		CString sOk;
 		sOk.LoadString( IDS_START );
 		GetDlgItem( IDOK )->SetWindowText( sOk );
 
 		CString sText;
-		sText.Format( IDS_DONE, m_nTotal, m_nBad );
+		sText.Format( IDS_DONE, (int)m_pList.size(), m_nBad );
 		m_wndStatus.SetWindowText( sText );
 
 		// Clean-up
 		Stop();
-	}
-}
 
-void CSageLinksDlg::OnTimer( UINT_PTR nIDEvent )
-{
-	CString sStatus;
-	{
-		CSingleLock oLock( &m_pSection, TRUE );
-
-		while ( ! m_pIncoming.IsEmpty() )
-		{
-			OnNewItem( m_pIncoming.RemoveHead() );
-		}
-
-		sStatus = m_sStatus;
-	}
-	if ( sStatus != m_sOldStatus )
-	{
-		m_sOldStatus = sStatus;
-
-		if ( ! sStatus.IsEmpty() )
-		{
-			CString sText;
-			sText.Format( IDS_WORK, (LPCTSTR)sStatus );
-			m_wndStatus.SetWindowText( sText );
-		}
-	}
-
-	if ( m_bSort )
-	{
-		m_bSort = FALSE;
-		SortList();
+		return;
 	}
 
 	__super::OnTimer( nIDEvent );
@@ -325,101 +314,108 @@ void CSageLinksDlg::OnOK()
 	pFocus->SetFocus();
 }
 
+void CSageLinksDlg::Resize()
+{
+	CRect rc;
+	m_wndList.GetClientRect( &rc );
+	const int width = ( rc.Width() - CX_ICON - CX_ICON - GetSystemMetrics( SM_CXVSCROLL ) - 5 ) / 2;
+	m_wndList.SetColumnWidth( COL_SOURCE, width );
+	m_wndList.SetColumnWidth( COL_TYPE, CX_ICON );
+	m_wndList.SetColumnWidth( COL_TARGET, width );
+	m_wndList.SetColumnWidth( COL_RESULT, CX_ICON );
+}
+
 void CSageLinksDlg::OnSize( UINT nType, int cx, int cy )
 {
 	if ( m_wndList.m_hWnd )
 	{
-		CRect rc;
-		m_wndList.GetClientRect( &rc );
-		const int width = ( rc.Width() - CX_ICON - CX_ICON - 5 ) / 2;
-		m_wndList.SetColumnWidth( COL_SOURCE, width );
-		m_wndList.SetColumnWidth( COL_TYPE, CX_ICON );
-		m_wndList.SetColumnWidth( COL_TARGET, width );
-		m_wndList.SetColumnWidth( COL_RESULT, CX_ICON );
+		Resize();
 	}
 
 	__super::OnSize( nType, cx, cy );
 }
 
-void CSageLinksDlg::OnGetMinMaxInfo(MINMAXINFO* lpMMI)
-{
-	__super::OnGetMinMaxInfo( lpMMI );
-
-	lpMMI->ptMinTrackSize.x = m_rcInitial.Width();
-	lpMMI->ptMinTrackSize.y = m_rcInitial.Height();
-}
-
 void CSageLinksDlg::OnNMDblclkList(NMHDR *pNMHDR, LRESULT *pResult)
 {
 	LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast< LPNMITEMACTIVATE >( pNMHDR );
+	*pResult = 0;
 
-	if ( pNMItemActivate->iItem >= 0 )
+	CSingleLock oLock( &m_pSection, TRUE );
+
+	if ( pNMItemActivate->iItem >= 0 && pNMItemActivate->iItem < (int)m_pList.size() )
 	{
+		const CLink* plink = m_pList.at( pNMItemActivate->iItem );
+
 		CWaitCursor wc;
 
-		const CLink* pLink = (const CLink*)m_wndList.GetItemData( pNMItemActivate->iItem );
-		ShellExecute( GetSafeHwnd(), nullptr, _T("explorer.exe"), _T("/select, \"") + pLink->m_sSource + _T("\""), nullptr, SW_SHOWNORMAL );
+		ShellExecute( GetSafeHwnd(), nullptr, _T("explorer.exe"), _T("/select, \"") + plink->m_sSource + _T("\""), nullptr, SW_SHOWNORMAL );
 	}
-
-	*pResult = 0;
 }
 
 void CSageLinksDlg::OnNMRClickList( NMHDR *pNMHDR, LRESULT *pResult )
 {
 	LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>( pNMHDR );
+	*pResult = 0;
 
-	if ( pNMItemActivate->iItem >= 0 )
+	CWaitCursor wc;
+
+	CSingleLock oLock( &m_pSection, TRUE );
+
+	// Count selected items
+	CStringList oFiles;
+	std::vector< int > oIndexes;
+	for ( POSITION pos = m_wndList.GetFirstSelectedItemPosition(); pos; )
 	{
-		CWaitCursor wc;
+		const int index = m_wndList.GetNextSelectedItem( pos );
+		oIndexes.push_back( index );
 
-		CStringList oFiles;
-		for ( int i = 0; i < m_nTotal; ++i )
-		{
-			if (  m_wndList.GetItemState( i, LVIS_SELECTED ) == LVIS_SELECTED )
-			{
-				const CLink* pLink = (const CLink*)m_wndList.GetItemData( i );
-				oFiles.AddHead( pLink->m_sSource );
-			}
-		}
-
-		if ( ! oFiles.IsEmpty() )
-		{
-			CMenu oMenu;
-			if ( oMenu.CreatePopupMenu() )
-			{
-				CPoint ptAction( pNMItemActivate->ptAction );
-				m_wndList.ClientToScreen( &ptAction );
-
-				DoExplorerMenu( GetSafeHwnd(), oFiles, ptAction, oMenu.GetSafeHmenu() );
-
-				// Re-check list for deleted items
-				for ( int i = m_nTotal - 1; i >= 0; -- i )
-				{
-					if ( m_wndList.GetItemState( i, LVIS_SELECTED ) == LVIS_SELECTED )
-					{
-						CLink* pLink = (CLink*)m_wndList.GetItemData( i );
-						if ( GetFileAttributes( pLink->m_sSource ) == INVALID_FILE_ATTRIBUTES )
-						{
-							VERIFY( m_wndList.DeleteItem( i ) );
-
-							-- m_nTotal;
-							if ( ! pLink->m_bResult )
-								-- m_nBad;
-
-							delete pLink;
-						}
-					}
-				}
-			}
-		}
+		const CLink* plink = m_pList.at( index );
+		oFiles.AddTail( plink->m_sSource );
 	}
 
-	*pResult = 0;
+	// From end to start
+	std::sort( oIndexes.begin(), oIndexes.end(), std::greater< int >() );
+
+	if ( oFiles.GetCount() )
+	{
+		// Show user menu
+		CMenu oMenu;
+		if ( oMenu.CreatePopupMenu() )
+		{
+			CPoint ptAction( pNMItemActivate->ptAction );
+			m_wndList.ClientToScreen( &ptAction );
+			DoExplorerMenu( GetSafeHwnd(), oFiles, ptAction, oMenu.GetSafeHmenu() );
+
+			// Re-check list for deleted items
+			for ( auto i : oIndexes )
+			{
+				const CLink* plink = m_pList.at( i );
+				if ( ! IsExist( plink->m_sSource ) )
+				{
+					if ( ! plink->m_bResult )
+					{
+						-- m_nBad;
+					}
+
+					delete plink;
+
+					m_pList.erase( m_pList.begin() + i );
+
+					m_wndList.SetItemState( i, 0, LVIS_SELECTED );
+				}
+			}
+
+			m_wndList.SetItemCountEx( m_pList.size(), LVSICF_NOINVALIDATEALL | LVSICF_NOSCROLL );
+			m_wndList.InvalidateRect( nullptr );
+		}
+	}
 }
 
 void CSageLinksDlg::OnHdnItemclickList( NMHDR *pNMHDR, LRESULT *pResult )
 {
 	NMLISTVIEW* pLV = (NMLISTVIEW*)pNMHDR;
+
+	m_nSort = 0;
 
 	CHeaderCtrl* pHeader = m_wndList.GetHeaderCtrl();
 	const int count = pHeader->GetItemCount();
@@ -428,9 +424,15 @@ void CSageLinksDlg::OnHdnItemclickList( NMHDR *pNMHDR, LRESULT *pResult )
 	{
 		pHeader->GetItem( i, &it );
 		if ( i == pLV->iItem )
+		{
 			it.fmt = ( it.fmt & ~( HDF_SORTDOWN | HDF_SORTUP ) ) | ( ( it.fmt & HDF_SORTUP ) ? HDF_SORTDOWN : HDF_SORTUP );
+
+			m_nSort = ( it.fmt & HDF_SORTDOWN ) ? ( i + 1 ) : - ( i + 1 );
+		}
 		else
+		{
 			it.fmt &= ~( HDF_SORTDOWN | HDF_SORTUP );
+		}
 		pHeader->SetItem( i, &it );
 	}
 
@@ -441,77 +443,62 @@ void CSageLinksDlg::OnHdnItemclickList( NMHDR *pNMHDR, LRESULT *pResult )
 
 void CSageLinksDlg::SortList()
 {
-	const CHeaderCtrl* pHeader = m_wndList.GetHeaderCtrl();
-	const int count = pHeader->GetItemCount();
-	HDITEM it = { HDI_FORMAT };
-	for ( int i = 0; i < count; ++i )
+	if ( m_nSort )
 	{
-		pHeader->GetItem( i, &it );
-		if ( it.fmt & ( HDF_SORTUP | HDF_SORTDOWN ) )
-		{
-			m_wndList.SortItems( &CSageLinksDlg::SortFunc, (DWORD_PTR)( ( it.fmt & HDF_SORTUP ) ? ( i + 1 ) : - ( i + 1 ) ) );
-			m_wndList.UpdateWindow();
-			break;
-		}
+		std::sort( m_pList.begin(), m_pList.end(),
+			[=](const CLink* pData1, const CLink* pData2) noexcept
+			{
+				int nRetVal = 0;
+
+				const int nColumn = abs( m_nSort ) - 1;
+				switch ( nColumn )
+				{
+				case COL_SOURCE:
+					nRetVal = pData1->m_sSource.CompareNoCase( pData2->m_sSource );
+					break;
+
+				case COL_TYPE:
+					nRetVal = (int)pData1->m_nType - (int)pData2->m_nType;
+					break;
+
+				case COL_TARGET:
+					nRetVal = pData1->m_sTarget.CompareNoCase( pData2->m_sTarget );
+					break;
+
+				case COL_RESULT:
+					nRetVal = pData1->m_bResult - pData2->m_bResult;
+					break;
+				}
+
+				if ( nRetVal == 0 )
+					nRetVal = pData1->m_bResult - pData2->m_bResult;
+				if ( nRetVal == 0 )
+					nRetVal = (int)pData1->m_nType - (int)pData2->m_nType;
+				if ( nRetVal == 0 )
+					nRetVal = pData1->m_sSource.CompareNoCase( pData2->m_sSource );
+				if ( nRetVal == 0 )
+					nRetVal = pData1->m_sTarget.CompareNoCase( pData2->m_sTarget );
+
+				return ( ( ( m_nSort > 0 ) ? nRetVal : ( - nRetVal ) ) > 0 );
+			} );
+
+		m_wndList.InvalidateRect( nullptr );
 	}
-}
-
-int CALLBACK CSageLinksDlg::SortFunc(LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort)
-{
-	int nRetVal = 0;
-
-	const CLink* pData1 = (const CLink*)lParam1;
-	const CLink* pData2 = (const CLink*)lParam2;
-
-	int nColumn = abs( (int)lParamSort ) - 1;
-	switch ( nColumn )
-	{
-	case COL_SOURCE:
-		nRetVal = pData1->m_sSource.CompareNoCase( pData2->m_sSource );
-		break;
-
-	case COL_TYPE:
-		nRetVal = (int)pData1->m_nType - (int)pData2->m_nType;
-		break;
-
-	case COL_TARGET:
-		nRetVal = pData1->m_sTarget.CompareNoCase( pData2->m_sTarget );
-		break;
-
-	case COL_RESULT:
-		nRetVal = pData1->m_bResult - pData2->m_bResult;
-		break;
-	}
-
-	if ( nRetVal == 0 )
-		nRetVal = pData1->m_bResult - pData2->m_bResult;
-	if ( nRetVal == 0 )
-		nRetVal = (int)pData1->m_nType - (int)pData2->m_nType;
-	if ( nRetVal == 0 )
-		nRetVal = pData1->m_sSource.CompareNoCase( pData2->m_sSource );
-	if ( nRetVal == 0 )
-		nRetVal = pData1->m_sTarget.CompareNoCase( pData2->m_sTarget );
-
-	return ( lParamSort > 0 ) ? nRetVal : - nRetVal;
 }
 
 void CSageLinksDlg::ClearList()
 {
 	CSingleLock oLock( &m_pSection, TRUE );
 
-	while ( ! m_pIncoming.IsEmpty() )
+	for ( auto i : m_pList )
 	{
-		delete m_pIncoming.RemoveHead();
+		delete i;
 	}
 
-	for ( int i = 0; i < m_nTotal; ++i )
-	{
-		delete (CLink*)m_wndList.GetItemData( i );
-	}
+	m_pList.clear();
 
 	m_wndList.DeleteAllItems();
 
-	m_nTotal = 0;
 	m_nBad = 0;
 }
 
@@ -521,42 +508,130 @@ BOOL CSageLinksDlg::OnKeyDown(UINT nChar, UINT /*nRepCnt*/, UINT /*nFlags*/)
 	{
 		if ( GetFocus() == static_cast< CWnd*>( &m_wndList ) )
 		{
-			int nCount = 0;
-			for ( int i = 0; i < m_nTotal; ++i )
+			CSingleLock oLock( &m_pSection, TRUE );
+
+			// Count selected items
+			std::vector< int > oIndexes;
+			for ( POSITION pos = m_wndList.GetFirstSelectedItemPosition(); pos; )
 			{
-				if ( m_wndList.GetItemState( i, LVIS_SELECTED ) == LVIS_SELECTED )
-					++ nCount;
+				oIndexes.push_back( m_wndList.GetNextSelectedItem( pos ) );
 			}
 
-			if ( nCount )
+			// From end to start
+			std::sort( oIndexes.begin(), oIndexes.end(), std::greater< int >() );
+
+			// Ask user
+			if ( UINT nCount = oIndexes.size() )
 			{
 				CString sPrompt;
 				sPrompt.Format( IDS_DELETE_CONFIRM, nCount );
 				if ( AfxMessageBox( sPrompt, MB_YESNO | MB_ICONQUESTION ) == IDYES )
 				{
+					// Delete selected items
+
 					CWaitCursor wc;
 
-					for ( int i = m_nTotal - 1; i >= 0; -- i )
+					for ( auto i : oIndexes )
 					{
-						if ( m_wndList.GetItemState( i, LVIS_SELECTED ) == LVIS_SELECTED )
+						const CLink* plink = m_pList.at( i );
+						if ( plink->DeleteFile() )
 						{
-							CLink* pLink = (CLink*)m_wndList.GetItemData( i );
-							if ( DeleteFile( pLink->m_sSource ) )
+							if ( ! plink->m_bResult )
 							{
-								VERIFY( m_wndList.DeleteItem( i ) );
-
-								-- m_nTotal;
-								if ( ! pLink->m_bResult )
-									-- m_nBad;
-
-								delete pLink;
+								--m_nBad;
 							}
+
+							delete plink;
+
+							m_pList.erase( m_pList.begin() + i );
+
+							m_wndList.SetItemState( i, 0, LVIS_SELECTED );
 						}
 					}
+
+					m_wndList.SetItemCountEx( m_pList.size(), LVSICF_NOINVALIDATEALL | LVSICF_NOSCROLL );
+					m_wndList.InvalidateRect( nullptr );
 				}
 			}
 			return TRUE;
 		}
 	}
 	return FALSE;
+}
+
+void CSageLinksDlg::OnLvnGetdispinfoList(NMHDR *pNMHDR, LRESULT *pResult)
+{
+	NMLVDISPINFO* pDispInfo = reinterpret_cast< NMLVDISPINFO* >( pNMHDR );
+	*pResult = 0;
+
+	CSingleLock oLock( &m_pSection, TRUE );
+
+	LVITEMW& item = pDispInfo->item;
+	if ( item.iItem >= 0 && item.iItem < (int)m_pList.size() )
+	{
+		const CLink* plink = m_pList.at( item.iItem );
+
+		if ( item.mask & LVIF_PARAM )
+		{
+			item.lParam = (DWORD_PTR)item.iItem;
+		}
+
+		switch ( item.iSubItem )
+		{
+		case COL_SOURCE:
+			if ( item.mask & LVIF_IMAGE )
+			{
+				item.iImage = ( plink->m_hIcon ? m_oImages.Add( plink->m_hIcon ) : m_nImageUnknown );
+			}
+			if ( item.mask & LVIF_TEXT )
+			{
+				_tcsncpy_s( item.pszText, item.cchTextMax, plink->m_sSource, _TRUNCATE );
+			}
+			break;
+
+		case COL_TYPE:
+			if ( item.mask & LVIF_IMAGE )
+			{
+				item.iImage =
+					( ( plink->m_nType == LinkType::Symbolic ) ? m_nImageSymbolic :
+					( ( plink->m_nType == LinkType::Junction ) ? m_nImageJunction :
+					( ( plink->m_nType == LinkType::Shortcut ) ? m_nImageShortcut : m_nImageUnknown ) ) );
+			}
+			break;
+
+		case COL_TARGET:
+			if ( item.mask & LVIF_IMAGE )
+			{
+				item.iImage = ( plink->m_hIcon ? m_oImages.Add( plink->m_hIcon ) : m_nImageUnknown );
+			}
+			if ( item.mask & LVIF_TEXT )
+			{
+				_tcsncpy_s( item.pszText, item.cchTextMax, plink->m_sTarget, _TRUNCATE );
+			}
+			break;
+
+		case COL_RESULT:
+			if ( item.mask & LVIF_IMAGE )
+			{
+				item.iImage = plink->m_bResult ? m_nImageSuccess : m_nImageError;
+			}
+			break;
+		}
+	}
+
+	item.mask |= LVIF_DI_SETITEM;
+}
+
+void CSageLinksDlg::OnLvnOdcachehintList(NMHDR *pNMHDR, LRESULT *pResult)
+{
+	LPNMLVCACHEHINT pCacheHint = reinterpret_cast<LPNMLVCACHEHINT>( pNMHDR );
+	*pResult = 0;
+	pCacheHint;
+}
+
+void CSageLinksDlg::OnLvnOdfinditemList(NMHDR *pNMHDR, LRESULT *pResult)
+{
+	LPNMLVFINDITEM pFindInfo = reinterpret_cast<LPNMLVFINDITEM>( pNMHDR );
+	*pResult = 0;
+	pFindInfo;
 }

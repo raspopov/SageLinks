@@ -29,47 +29,6 @@ static char THIS_FILE[] = __FILE__;
 #define new DEBUG_NEW
 #endif
 
-#define TAG_PREFIX		_T("\\??\\")
-#define UNC_PREFIX		_T("\\??\\UNC\\")
-#define LONG_PREFIX		_T("\\\\?\\")
-
-#define LONG_PATH		512	// symbols
-
-#define _P(x)			(x),(_countof(x)-1)
-
-inline BOOL IsExist(LPCTSTR szPath) noexcept
-{
-	return ( GetFileAttributes( szPath ) != INVALID_FILE_ATTRIBUTES );
-}
-
-inline BOOL IsDots(LPCTSTR szFileName) noexcept
-{
-	return szFileName[ 0 ] == _T('.') && ( szFileName[ 1 ] == 0 || ( szFileName[ 1 ] == _T('.') && szFileName[ 2 ] == 0 ) );
-}
-
-inline BOOL IsLocal(LPCTSTR szFileName) noexcept
-{
-	return _istalpha( szFileName[ 0 ] ) && szFileName[ 1 ] == _T( ':' ) && ( szFileName[ 2 ] == 0 || szFileName[ 2 ] == _T('\\') );
-}
-
-inline BOOL IsUNC(LPCTSTR szFileName) noexcept
-{
-	return szFileName[ 0 ] == _T('\\') && szFileName[ 1 ] == _T('\\') && _istalnum( szFileName[ 2 ] );
-}
-
-CString GetRemotedPath(const CString& sBasePath, const CString& sLocalPath)
-{
-	// Source path is UNC
-	const int n = sBasePath.Mid( 2 ).Find( _T( '\\' ) ) + 2;
-	if ( n > 2 && IsLocal( sLocalPath ) )
-	{
-		// Target path is local and source path is rooted UNC
-		return sBasePath.Left( n + 1 ) + sLocalPath.GetAt( 0 ) + _T( '$' ) + sLocalPath.Mid( 2 );
-	}
-	return CString();
-}
-
-
 void CSageLinksDlg::Thread()
 {
 	HRESULT hres;
@@ -113,7 +72,6 @@ void CSageLinksDlg::Thread()
 
 		{
 			CSingleLock oLock( &m_pSection, TRUE );
-
 			m_sStatus = sDir;
 		}
 
@@ -246,10 +204,7 @@ void CSageLinksDlg::Thread()
 					{
 						SHFILEINFO sfi = {};
 						SHGetFileInfo( bResult ? sTarget : sPath, 0, &sfi, sizeof( sfi ), SHGFI_ICON | SHGFI_SMALLICON );
-
-						CSingleLock oLock( &m_pSection, TRUE );
-
-						m_pIncoming.AddTail( new CLink( nType, sfi.hIcon, sPath, sTarget, bResult ) );
+						OnNewItem( new CLink( nType, sfi.hIcon, sPath, sTarget, bResult ) );
 					}
 				}
 				else if ( ( wfa.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY ) != 0 )
@@ -408,10 +363,7 @@ void CSageLinksDlg::Thread()
 						{
 							SHFILEINFO sfi = {};
 							SHGetFileInfo( sPath, 0, &sfi, sizeof( sfi ), SHGFI_ICON | SHGFI_SMALLICON );
-
-							CSingleLock oLock( &m_pSection, TRUE );
-
-							m_pIncoming.AddTail( new CLink( nType, sfi.hIcon, sPath, sTarget, bResult ) );
+							OnNewItem( new CLink( nType, sfi.hIcon, sPath, sTarget, bResult ) );
 						}
 					}
 				}
@@ -428,10 +380,5 @@ void CSageLinksDlg::Thread()
 	if ( fnWow64RevertWow64FsRedirection ) fnWow64RevertWow64FsRedirection( pRedir );
 #endif
 
-	CSingleLock oLock( &m_pSection, TRUE );
-
-	m_oDirs.RemoveAll();
-	m_sStatus.Empty();
-
-	m_pIncoming.AddTail( new CLink() );
+	PostMessage( WM_TIMER, ID_DONE );
 }

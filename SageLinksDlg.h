@@ -28,12 +28,10 @@ class CSageLinksDlg : public CDialogExSized
 	DECLARE_DYNAMIC(CSageLinksDlg)
 
 public:
-	CSageLinksDlg(CWnd* pParent = nullptr);	// standard constructor
+	CSageLinksDlg(CWnd* pParent = nullptr);
 
 // Dialog Data
-#ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_SAGELINKS_DIALOG };
-#endif
 
 	afx_msg BOOL OnKeyDown( UINT nChar, UINT nRepCnt, UINT nFlags );
 
@@ -42,10 +40,10 @@ public:
 protected:
 	enum LinkType { Unknown, Symbolic, Junction, Shortcut };
 
-	class ATL_NO_VTABLE CLink
+	class CLink
 	{
 	public:
-		inline CLink(LinkType nType = LinkType::Unknown, HICON hIcon = nullptr, const CString& sSource = CString(), const CString& sTarget = CString(), BOOL bResult = FALSE)
+		inline CLink(LinkType nType, HICON hIcon, const CString& sSource, const CString& sTarget, BOOL bResult) noexcept
 			: m_nType	( nType )
 			, m_hIcon	( hIcon )
 			, m_sSource	( sSource )
@@ -54,9 +52,20 @@ protected:
 		{
 		}
 
-		inline ~CLink()
+		CLink(CLink&) = delete;
+		CLink& operator=(CLink&) = delete;
+
+		inline ~CLink() noexcept
 		{
-			if ( m_hIcon ) DestroyIcon( m_hIcon );
+			if ( m_hIcon )
+			{
+				DestroyIcon( m_hIcon );
+			}
+		}
+
+		inline BOOL DeleteFile() const noexcept
+		{
+			return ::DeleteFile( m_sSource ) || ::DeleteFile( LONG_PREFIX + m_sSource );
 		}
 
 		LinkType	m_nType;
@@ -65,7 +74,8 @@ protected:
 		CString		m_sTarget;
 		BOOL		m_bResult;
 	};
-	typedef CList< CLink* > CLinkList;
+
+	using CLinkList = std::vector< CLink* >;
 
 	HICON				m_hIcon;
 	CImageList			m_oImages;
@@ -76,10 +86,8 @@ protected:
 	int					m_nImageJunction;
 	int					m_nImageShortcut;
 
-	int					m_nTotal;			// Total links
 	int					m_nBad;				// Bad links
-
-	BOOL				m_bSort;			// Sort needed
+	int					m_nSort;			// Sort column
 	CListCtrl			m_wndList;
 	CStatic				m_wndStatus;
 	CStringList			m_oDirs;
@@ -87,10 +95,9 @@ protected:
 	CString				m_sOldStatus;
 	HANDLE				m_hThread;
 	CCriticalSection	m_pSection;
-	CLinkList			m_pIncoming;		// Incoming items
+	CLinkList			m_pList;			// Incoming items
 	CEvent				m_pFlag;
 	CMFCEditBrowseCtrl	m_wndBrowse;
-	CRect				m_rcInitial;
 
 	static unsigned __stdcall ThreadStub(void* param);
 	void Thread();
@@ -98,23 +105,28 @@ protected:
 	void Start();
 
 	void SortList();
-	static int CALLBACK SortFunc( LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort );
 	void ClearList();
-	void OnNewItem(CLink* pLink);
+	void OnNewItem(CLink* link);
+	void Resize();
 
-	virtual BOOL OnInitDialog();
-	virtual void DoDataExchange( CDataExchange* pDX );	// DDX/DDV support
-	virtual void OnOK();
+	virtual BOOL OnInitDialog() override;
+	virtual void DoDataExchange( CDataExchange* pDX ) override;
+	virtual void OnOK() override;
 
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg void OnDestroy();
 	afx_msg void OnSize( UINT nType, int cx, int cy );
-	afx_msg void OnGetMinMaxInfo( MINMAXINFO* lpMMI );
 	afx_msg void OnNMDblclkList( NMHDR *pNMHDR, LRESULT *pResult );
 	afx_msg void OnNMRClickList( NMHDR *pNMHDR, LRESULT *pResult );
+	afx_msg void OnLvnGetdispinfoList( NMHDR *pNMHDR, LRESULT *pResult );
+	afx_msg void OnLvnOdcachehintList( NMHDR *pNMHDR, LRESULT *pResult );
+	afx_msg void OnLvnOdfinditemList( NMHDR *pNMHDR, LRESULT *pResult );
 	afx_msg void OnHdnItemclickList( NMHDR *pNMHDR, LRESULT *pResult );
 
 	DECLARE_MESSAGE_MAP()
 };
+
+#define ID_TIMER	100		// Timer notification message
+#define ID_DONE		101		// End of work notification message

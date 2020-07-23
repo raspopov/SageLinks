@@ -45,4 +45,44 @@ extern CSageLinksApp theApp;
 #define OPT_SECTION		_T("Settings")
 #define OPT_PATH		_T("Path")
 
+#define TAG_PREFIX		_T("\\??\\")
+#define UNC_PREFIX		_T("\\??\\UNC\\")
+#define LONG_PREFIX		_T("\\\\?\\")
+
+#define LONG_PATH		512	// symbols
+
+#define _P(x)			(x),(_countof(x)-1)
+
 CString ErrorMessage(HRESULT hr);
+
+inline BOOL IsExist(LPCTSTR szPath) noexcept
+{
+	return ( ::GetFileAttributes( szPath ) != INVALID_FILE_ATTRIBUTES );
+}
+
+inline BOOL IsDots(LPCTSTR szFileName) noexcept
+{
+	return szFileName[ 0 ] == _T('.') && ( szFileName[ 1 ] == 0 || ( szFileName[ 1 ] == _T('.') && szFileName[ 2 ] == 0 ) );
+}
+
+inline BOOL IsLocal(LPCTSTR szFileName) noexcept
+{
+	return _istalpha( szFileName[ 0 ] ) && szFileName[ 1 ] == _T( ':' ) && ( szFileName[ 2 ] == 0 || szFileName[ 2 ] == _T('\\') );
+}
+
+inline BOOL IsUNC(LPCTSTR szFileName) noexcept
+{
+	return szFileName[ 0 ] == _T('\\') && szFileName[ 1 ] == _T('\\') && _istalnum( szFileName[ 2 ] );
+}
+
+inline CString GetRemotedPath(const CString& sBasePath, const CString& sLocalPath)
+{
+	// Source path is UNC
+	const int n = sBasePath.Mid( 2 ).Find( _T( '\\' ) ) + 2;
+	if ( n > 2 && IsLocal( sLocalPath ) )
+	{
+		// Target path is local and source path is rooted UNC
+		return sBasePath.Left( n + 1 ) + sLocalPath.GetAt( 0 ) + _T( '$' ) + sLocalPath.Mid( 2 );
+	}
+	return CString();
+}

@@ -27,16 +27,15 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 inline UINT_PTR DoExplorerMenu(HWND hwnd, const CStringList& oFiles, POINT point, HMENU hMenu)
 {
 	UINT_PTR nCmd = 0;
-	CComPtr< IContextMenu > pContextMenu1;
+	CComPtr< IContextMenu > pContextMenu;
 	CShellList oItemIDListList( oFiles );
-	if ( oItemIDListList.GetMenu( hwnd, (void**)&pContextMenu1 ) )
+	if ( oItemIDListList.GetMenu( hwnd, (void**)&pContextMenu ) )
 	{
-		HRESULT hr = pContextMenu1->QueryContextMenu( hMenu, 0, ID_SHELL_MENU_MIN, ID_SHELL_MENU_MAX, CMF_NORMAL | CMF_EXPLORE );
+		HRESULT hr = pContextMenu->QueryContextMenu( hMenu, 0, ID_SHELL_MENU_MIN, ID_SHELL_MENU_MAX, ( ( GetKeyState( VK_SHIFT ) & 0x8000 ) ? CMF_EXTENDEDVERBS : 0 ) | CMF_EXPLORE );
 		if ( SUCCEEDED( hr ) )
 		{
 			::SetForegroundWindow( hwnd );
-			nCmd = ::TrackPopupMenu( hMenu, TPM_RETURNCMD | TPM_LEFTALIGN | TPM_TOPALIGN |
-				TPM_LEFTBUTTON | TPM_RIGHTBUTTON, point.x, point.y, 0, hwnd, nullptr );
+			nCmd = ::TrackPopupMenu( hMenu, TPM_RETURNCMD | TPM_LEFTALIGN | TPM_TOPALIGN | TPM_LEFTBUTTON | TPM_RIGHTBUTTON, point.x, point.y, 0, hwnd, nullptr );
 			::PostMessage( hwnd, WM_NULL, 0, 0 );
 
 			// If a command was selected from the shell menu, execute it.
@@ -47,7 +46,7 @@ inline UINT_PTR DoExplorerMenu(HWND hwnd, const CStringList& oFiles, POINT point
 				ici.lpVerb = reinterpret_cast<LPCSTR>( nCmd - ID_SHELL_MENU_MIN );
 				ici.lpVerbW = reinterpret_cast<LPCWSTR>( nCmd - ID_SHELL_MENU_MIN );
 				ici.nShow = SW_SHOWNORMAL;
-				hr = pContextMenu1->InvokeCommand( (CMINVOKECOMMANDINFO*)&ici );
+				hr = pContextMenu->InvokeCommand( (CMINVOKECOMMANDINFO*)&ici );
 			}
 		}
 	}

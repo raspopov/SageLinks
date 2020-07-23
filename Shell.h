@@ -31,7 +31,7 @@ public:
 		if ( FAILED( hr ) )
 			return;
 
-		hr = pDesktop->ParseDisplayName( hWnd, 0, CT2OLE( szFullPath ), nullptr, &m_pidl, nullptr );
+		hr = pDesktop->ParseDisplayName( hWnd, nullptr, CT2OLE( szFullPath ), nullptr, &m_pidl, nullptr );
 		if ( FAILED( hr ) )
 			return;
 
