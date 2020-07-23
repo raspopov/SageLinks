@@ -14,10 +14,6 @@
 #define MyOutputDir		  ExtractFileDir( TargetPath )
 #define MyOutput		    LowerCase( StringChange( MyAppName + " " + MyAppVersion + " " + MyBitness, " ", "_" ) )
          
-#include "idp\lang\russian.iss"
-#include "idp\idp.iss"
-#include "dep\lang\russian.iss"
-#include "dep\dep.iss"
 #include "vcredist.iss"
 
 [Setup]
@@ -73,25 +69,8 @@ Name: "{group}\{cm:UninstallProgram,{#MyAppName}}";	Filename: "{uninstallexe}"
 [Run]
 Filename: "{app}\{#MyAppExe}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall runasoriginaluser
 
-[Registry]
-Root: HKCU; Subkey: "Software\{#MyAppPublisher}\{#MyAppName}"; Flags: dontcreatekey uninsdeletekey
-Root: HKCU; Subkey: "Software\{#MyAppPublisher}"; Flags: dontcreatekey uninsdeletekeyifempty
-
 [UninstallDelete]
-Name: "{userstartup}\{#MyAppName}.lnk"; Type: files
-Name: "{commonstartup}\{#MyAppName}.lnk"; Type: files
 Name: "{app}"; Type: dirifempty
 Name: "{pf}\{#MyAppPublisher}"; Type: dirifempty
 Name: "{localappdata}\{#MyAppPublisher}\{#MyAppName}"; Type: filesandordirs
 Name: "{localappdata}\{#MyAppPublisher}"; Type: dirifempty
-
-[Code]
-procedure InitializeWizard();
-begin
-
-  if InstallVCRedist() then begin
-    idpDownloadAfter( wpReady );
-    idpSetDetailedMode( True );
-  end;
-
-end;
