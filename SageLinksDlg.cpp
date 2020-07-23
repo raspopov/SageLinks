@@ -105,16 +105,16 @@ BOOL CSageLinksDlg::OnInitDialog()
 	m_wndList.SetImageList( &m_oImages, LVSIL_SMALL );
 	m_wndList.SetExtendedStyle( m_wndList.GetExtendedStyle() | LVS_EX_DOUBLEBUFFER | LVS_EX_FULLROWSELECT | LVS_EX_LABELTIP | LVS_EX_SUBITEMIMAGES );
 
-	m_wndList.InsertColumn( COL_SOURCE, _T( "Source" ), LVCFMT_LEFT, 100 );
-	m_wndList.InsertColumn( COL_TYPE,   _T( "" ), LVCFMT_CENTER, CX_ICON );
-	m_wndList.InsertColumn( COL_TARGET, _T( "Target" ), LVCFMT_LEFT, 100);
-	m_wndList.InsertColumn( COL_RESULT, _T( "" ), LVCFMT_CENTER, CX_ICON );
+	m_wndList.InsertColumn( COL_SOURCE, _T( "Source" ), LVCFMT_LEFT );
+	m_wndList.InsertColumn( COL_TYPE,   _T( "" ), LVCFMT_CENTER );
+	m_wndList.InsertColumn( COL_TARGET, _T( "Target" ), LVCFMT_LEFT );
+	m_wndList.InsertColumn( COL_RESULT, _T( "Result" ), LVCFMT_LEFT );
 
 	HDITEM it = { HDI_FORMAT };
 	m_wndList.GetHeaderCtrl()->GetItem( COL_RESULT, &it );
 	it.fmt |= HDF_SORTDOWN;
 	m_wndList.GetHeaderCtrl()->SetItem( COL_RESULT, &it );
-	m_nSort = COL_RESULT + 1;
+	m_nSort = - ( COL_RESULT + 1 );
 
 	m_wndBrowse.SetWindowText( m_sPath );
 
@@ -321,11 +321,11 @@ void CSageLinksDlg::Resize()
 {
 	CRect rc;
 	m_wndList.GetClientRect( &rc );
-	const int width = ( rc.Width() - CX_ICON - CX_ICON - GetSystemMetrics( SM_CXVSCROLL ) - 5 ) / 2;
-	m_wndList.SetColumnWidth( COL_SOURCE, width );
+	const int width = ( rc.Width() - CX_ICON - GetSystemMetrics( SM_CXVSCROLL ) - 5 ) / 5;
+	m_wndList.SetColumnWidth( COL_SOURCE, width * 2 );
 	m_wndList.SetColumnWidth( COL_TYPE, CX_ICON );
-	m_wndList.SetColumnWidth( COL_TARGET, width );
-	m_wndList.SetColumnWidth( COL_RESULT, CX_ICON );
+	m_wndList.SetColumnWidth( COL_TARGET, width * 2 );
+	m_wndList.SetColumnWidth( COL_RESULT, width );
 }
 
 void CSageLinksDlg::OnSize( UINT nType, int cx, int cy )
@@ -469,12 +469,12 @@ void CSageLinksDlg::SortList()
 					break;
 
 				case COL_RESULT:
-					nRetVal = pData1->m_bResult - pData2->m_bResult;
+					nRetVal = pData1->m_sResult.CompareNoCase( pData2->m_sResult );
 					break;
 				}
 
 				if ( nRetVal == 0 )
-					nRetVal = pData1->m_bResult - pData2->m_bResult;
+					nRetVal = pData1->m_sResult.CompareNoCase( pData2->m_sResult );
 				if ( nRetVal == 0 )
 					nRetVal = (int)pData1->m_nType - (int)pData2->m_nType;
 				if ( nRetVal == 0 )
@@ -617,7 +617,7 @@ void CSageLinksDlg::OnLvnGetdispinfoList(NMHDR *pNMHDR, LRESULT *pResult)
 		case COL_TARGET:
 			if ( item.mask & LVIF_IMAGE )
 			{
-				item.iImage = ( plink->m_hIcon ? m_oImages.Add( plink->m_hIcon ) : m_nImageUnknown );
+				item.iImage = plink->m_bResult ? m_nImageSuccess : m_nImageError;
 			}
 			if ( item.mask & LVIF_TEXT )
 			{
@@ -626,9 +626,9 @@ void CSageLinksDlg::OnLvnGetdispinfoList(NMHDR *pNMHDR, LRESULT *pResult)
 			break;
 
 		case COL_RESULT:
-			if ( item.mask & LVIF_IMAGE )
+			if ( item.mask & LVIF_TEXT )
 			{
-				item.iImage = plink->m_bResult ? m_nImageSuccess : m_nImageError;
+				_tcsncpy_s( item.pszText, item.cchTextMax, plink->m_sResult, _TRUNCATE );
 			}
 			break;
 		}

@@ -87,24 +87,28 @@ void CSageLinksDlg::Thread()
 					// Skip dots
 					continue;
 
+				const CString sPath( sDir + _T( "\\" ) + wfa.cFileName );
+				CString sTarget, sResult;
+				BOOL bResult = FALSE;
+
 				if ( ( wfa.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT ) != 0 )
 				{
-					LinkType nType = LinkType::Unknown;
+					// Reparse point
+					LinkType nType;
 					switch ( wfa.dwReserved0 )
 					{
 					case IO_REPARSE_TAG_MOUNT_POINT:
 						nType = LinkType::Junction;
 						break;
+
 					case IO_REPARSE_TAG_SYMLINK:
 						nType = LinkType::Symbolic;
 						break;
+
+					default:
+						nType = LinkType::Unknown;
 					}
 
-					// Reparse point
-					const CString sPath( sDir + _T( "\\" ) + wfa.cFileName );
-					CString sTarget;
-
-					BOOL bResult = FALSE;
 					HANDLE hFile = CreateFile( ( bUNC ? sPath : ( LONG_PREFIX + sPath ) ), FILE_READ_ATTRIBUTES,
 						FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
 						FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, nullptr );
@@ -124,6 +128,10 @@ void CSageLinksDlg::Thread()
 							{
 								sReparse.Append( pReparse->SymbolicLinkReparseBuffer.PathBuffer + pReparse->SymbolicLinkReparseBuffer.SubstituteNameOffset / sizeof( WCHAR ),
 									pReparse->SymbolicLinkReparseBuffer.SubstituteNameLength / sizeof( WCHAR ) );
+							}
+							else
+							{
+								sResult.Format( IDS_UNKNOWN_REPARSE, wfa.dwReserved0 );
 							}
 
 							if ( _tcsncmp( sReparse, _P( UNC_PREFIX ) ) == 0 )
@@ -177,8 +185,8 @@ void CSageLinksDlg::Thread()
 
 								if ( ! bResult )
 								{
-									sTarget = ErrorMessage( GetLastError() );
-									TRACE( _T("Target error %s : %s\n"), (LPCTSTR)ErrorMessage( GetLastError() ), (LPCTSTR)sPath );
+									sResult = ErrorMessage( GetLastError() );
+									TRACE( _T("Target error %s : %s\n"), (LPCTSTR)sResult, (LPCTSTR)sPath );
 								}
 							}
 							else
@@ -188,29 +196,28 @@ void CSageLinksDlg::Thread()
 						}
 						else
 						{
-							sTarget = ErrorMessage( GetLastError() );
-							TRACE( _T("IO Error %s : %s\n"), (LPCTSTR)ErrorMessage( GetLastError() ), (LPCTSTR)sPath );
+							sResult = ErrorMessage( GetLastError() );
+							TRACE( _T("IO Error %s : %s\n"), (LPCTSTR)sResult, (LPCTSTR)sPath );
 						}
 
 						CloseHandle( hFile );
 					}
 					else
 					{
-						sTarget = ErrorMessage( GetLastError() );
-						TRACE( _T("Open Error %s : %s\n"), (LPCTSTR)ErrorMessage( GetLastError() ), (LPCTSTR)sPath );
+						sResult = ErrorMessage( GetLastError() );
+						TRACE( _T("Open Error %s : %s\n"), (LPCTSTR)sResult, (LPCTSTR)sPath );
 					}
 
 					if ( nType != LinkType::Unknown )
 					{
 						SHFILEINFO sfi = {};
 						SHGetFileInfo( bResult ? sTarget : sPath, 0, &sfi, sizeof( sfi ), SHGFI_ICON | SHGFI_SMALLICON );
-						OnNewItem( new CLink( nType, sfi.hIcon, sPath, sTarget, bResult ) );
+						OnNewItem( new CLink( nType, sfi.hIcon, sPath, sTarget, sResult, bResult ) );
 					}
 				}
 				else if ( ( wfa.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY ) != 0 )
 				{
 					// Directory
-					const CString sPath( sDir + _T( "\\" ) + wfa.cFileName );
 					m_oDirs.AddTail( sPath );
 				}
 				else
@@ -219,17 +226,15 @@ void CSageLinksDlg::Thread()
 					if ( len > 4 && _tcscmp( wfa.cFileName + len - 4, _T( ".lnk" ) ) == 0 )
 					{
 						// Shortcut
-						const CString sPath( sDir + _T( "\\" ) + wfa.cFileName );
-						CString sTarget;
-						BOOL bResult = FALSE;
-
 						LinkType nType = LinkType::Shortcut;
 
 						CComPtr< IShellLink > pShellLink;
 						if ( SUCCEEDED( hres = pShellLink.CoCreateInstance( CLSID_ShellLink ) ) )
 						{
 							CComQIPtr< IPersistFile > pLinkFile( pShellLink );
-							if ( pLinkFile && SUCCEEDED( hres = pLinkFile->Load( sPath, STGM_READ ) ) )
+							if ( pLinkFile &&
+								( SUCCEEDED( hres = pLinkFile->Load( sPath, STGM_READ ) ) ||
+								  SUCCEEDED( hres = pLinkFile->Load( LONG_PREFIX + sPath, STGM_READ ) ) ) )
 							{
 								CString sLinkPath;
 								hres = pShellLink->GetPath( sLinkPath.GetBuffer( LONG_PATH ), LONG_PATH, nullptr, SLGP_RAWPATH );
@@ -302,7 +307,8 @@ void CSageLinksDlg::Thread()
 
 									if ( ! bResult )
 									{
-										TRACE( _T("Target error %s : %s\n"), (LPCTSTR)ErrorMessage( GetLastError() ), (LPCTSTR)sPath );
+										sResult = ErrorMessage( GetLastError() );
+										TRACE( _T("Target error %s : %s\n"), (LPCTSTR)sResult, (LPCTSTR)sPath );
 
 										// Show raw path
 										sTarget = sLinkPath;
@@ -337,33 +343,33 @@ void CSageLinksDlg::Thread()
 									}
 									else
 									{
-										sTarget = ErrorMessage( hres );
-										TRACE( _T("GetIDList() error : %s\n"), (LPCTSTR)sPath );
+										sResult = ErrorMessage( hres );
+										TRACE( _T("GetIDList() error %s : %s\n"), (LPCTSTR)sResult, (LPCTSTR)sPath );
 									}
 								}
 								else
 								{
-									sTarget = ErrorMessage( hres );
-									TRACE( _T("GetPath() error : %s\n"), (LPCTSTR)sPath );
+									sResult = ErrorMessage( hres );
+									TRACE( _T("GetPath() error %s : %s\n"), (LPCTSTR)sResult, (LPCTSTR)sPath );
 								}
 							}
 							else
 							{
-								sTarget = ErrorMessage( hres );
-								TRACE( _T("Shell link error : %s\n"), (LPCTSTR)sPath );
+								sResult = ErrorMessage( hres );
+								TRACE( _T("Shell link error %s : %s\n"), (LPCTSTR)sResult, (LPCTSTR)sPath );
 							}
 						}
 						else
 						{
-							sTarget = ErrorMessage( hres );
-							TRACE( _T("Failed CoCreateInstance() : %s\n"), (LPCTSTR)sPath );
+							sResult = ErrorMessage( hres );
+							TRACE( _T("Failed CoCreateInstance() %s : %s\n"), (LPCTSTR)sResult, (LPCTSTR)sPath );
 						}
 
 						if ( nType != LinkType::Unknown )
 						{
 							SHFILEINFO sfi = {};
 							SHGetFileInfo( sPath, 0, &sfi, sizeof( sfi ), SHGFI_ICON | SHGFI_SMALLICON );
-							OnNewItem( new CLink( nType, sfi.hIcon, sPath, sTarget, bResult ) );
+							OnNewItem( new CLink( nType, sfi.hIcon, sPath, sTarget, sResult, bResult ) );
 						}
 					}
 				}

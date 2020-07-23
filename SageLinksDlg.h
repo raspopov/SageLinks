@@ -43,11 +43,12 @@ protected:
 	class CLink
 	{
 	public:
-		inline CLink(LinkType nType, HICON hIcon, const CString& sSource, const CString& sTarget, BOOL bResult) noexcept
+		inline CLink(LinkType nType, HICON hIcon, const CString& sSource, const CString& sTarget, const CString& sResult, BOOL bResult) noexcept
 			: m_nType	( nType )
 			, m_hIcon	( hIcon )
 			, m_sSource	( sSource )
 			, m_sTarget	( sTarget )
+			, m_sResult	( sResult )
 			, m_bResult	( bResult )
 		{
 		}
@@ -77,6 +78,7 @@ protected:
 		HICON		m_hIcon;
 		CString		m_sSource;
 		CString		m_sTarget;
+		CString		m_sResult;
 		BOOL		m_bResult;
 	};
 

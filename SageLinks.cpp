@@ -158,7 +158,7 @@ CString ErrorMessage(HRESULT hr)
 		sError.LoadString( IDS_UNKNOWN_ERROR );
 	}
 
-	sError.TrimRight( _T(" \r\n") );
+	sError.TrimRight( _T(". \r\n") );
 	sError.AppendFormat( _T(" (0x%08x)"), hr );
 	return sError;
 }
