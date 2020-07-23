@@ -135,13 +135,13 @@ CString ErrorMessage(HRESULT hr)
 
 	if ( sError.IsEmpty() )
 	{
-		LPTSTR lpszTemp = NULL;
-		FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, hr, 0, (LPTSTR)&lpszTemp, 0, NULL );
+		LPTSTR lpszTemp = nullptr;
+		FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, nullptr, hr, 0, (LPTSTR)&lpszTemp, 0, nullptr );
 		for ( int i = 0; ! lpszTemp && i < _countof( szModules ); ++i )
 		{
-			if ( HMODULE hModule = LoadLibraryEx( szModules[ i ], NULL, LOAD_LIBRARY_AS_DATAFILE ) )
+			if ( HMODULE hModule = LoadLibraryEx( szModules[ i ], nullptr, LOAD_LIBRARY_AS_DATAFILE ) )
 			{
-				FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_HMODULE, hModule, hr, 0, (LPTSTR)&lpszTemp, 0, NULL );
+				FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_HMODULE, hModule, hr, 0, (LPTSTR)&lpszTemp, 0, nullptr );
 				FreeLibrary( hModule );
 			}
 		}

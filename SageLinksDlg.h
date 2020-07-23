@@ -28,7 +28,7 @@ class CSageLinksDlg : public CDialogExSized
 	DECLARE_DYNAMIC(CSageLinksDlg)
 
 public:
-	CSageLinksDlg(CWnd* pParent = NULL);	// standard constructor
+	CSageLinksDlg(CWnd* pParent = nullptr);	// standard constructor
 
 // Dialog Data
 #ifdef AFX_DESIGN_TIME
@@ -45,7 +45,7 @@ protected:
 	class ATL_NO_VTABLE CLink
 	{
 	public:
-		inline CLink(LinkType nType = LinkType::Unknown, HICON hIcon = NULL, const CString& sSource = CString(), const CString& sTarget = CString(), BOOL bResult = FALSE)
+		inline CLink(LinkType nType = LinkType::Unknown, HICON hIcon = nullptr, const CString& sSource = CString(), const CString& sTarget = CString(), BOOL bResult = FALSE)
 			: m_nType	( nType )
 			, m_hIcon	( hIcon )
 			, m_sSource	( sSource )

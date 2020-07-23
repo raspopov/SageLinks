@@ -27,8 +27,8 @@ class CDialogExSized : public CDialogEx
 
 public:
 	CDialogExSized() = default;
-	CDialogExSized(UINT nIDTemplate, CWnd *pParent = NULL) : CDialogEx( nIDTemplate, pParent ) {}
-	CDialogExSized(LPCTSTR lpszTemplateName, CWnd *pParentWnd = NULL) : CDialogEx( lpszTemplateName, pParentWnd ) {}
+	CDialogExSized(UINT nIDTemplate, CWnd *pParent = nullptr) : CDialogEx( nIDTemplate, pParent ) {}
+	CDialogExSized(LPCTSTR lpszTemplateName, CWnd *pParentWnd = nullptr) : CDialogEx( lpszTemplateName, pParentWnd ) {}
 	virtual ~CDialogExSized() override = default;
 
 	void ReloadLayout();

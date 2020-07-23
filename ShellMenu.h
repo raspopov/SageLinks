@@ -36,7 +36,7 @@ inline UINT_PTR DoExplorerMenu(HWND hwnd, const CStringList& oFiles, POINT point
 		{
 			::SetForegroundWindow( hwnd );
 			nCmd = ::TrackPopupMenu( hMenu, TPM_RETURNCMD | TPM_LEFTALIGN | TPM_TOPALIGN |
-				TPM_LEFTBUTTON | TPM_RIGHTBUTTON, point.x, point.y, 0, hwnd, NULL );
+				TPM_LEFTBUTTON | TPM_RIGHTBUTTON, point.x, point.y, 0, hwnd, nullptr );
 			::PostMessage( hwnd, WM_NULL, 0, 0 );
 
 			// If a command was selected from the shell menu, execute it.

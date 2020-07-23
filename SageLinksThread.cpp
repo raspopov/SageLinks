@@ -76,7 +76,7 @@ void CSageLinksDlg::Thread()
 	DWORD nRead;
 	CAutoVectorPtr< BYTE > pBuf( new BYTE[ 4096 ] );
 
-	hres = CoInitializeEx( NULL, COINIT_APARTMENTTHREADED );
+	hres = CoInitializeEx( nullptr, COINIT_APARTMENTTHREADED );
 
 #ifndef _WIN64
 	typedef BOOL (WINAPI *tWow64DisableWow64FsRedirection)(PVOID*);
@@ -86,7 +86,7 @@ void CSageLinksDlg::Thread()
 		(tWow64DisableWow64FsRedirection)GetProcAddress( hKernel32, "Wow64DisableWow64FsRedirection" );
 	tWow64RevertWow64FsRedirection fnWow64RevertWow64FsRedirection =
 		(tWow64RevertWow64FsRedirection)GetProcAddress( hKernel32, "Wow64RevertWow64FsRedirection" );
-	PVOID pRedir = NULL;
+	PVOID pRedir = nullptr;
 	if ( fnWow64DisableWow64FsRedirection ) fnWow64DisableWow64FsRedirection( &pRedir );
 #endif
 
@@ -148,12 +148,12 @@ void CSageLinksDlg::Thread()
 
 					BOOL bResult = FALSE;
 					HANDLE hFile = CreateFile( ( bUNC ? sPath : ( LONG_PREFIX + sPath ) ), FILE_READ_ATTRIBUTES,
-						FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING,
-						FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, NULL );
+						FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
+						FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, nullptr );
 					if ( hFile != INVALID_HANDLE_VALUE )
 					{
 						nRead = 0;
-						if ( DeviceIoControl( hFile, FSCTL_GET_REPARSE_POINT, NULL, 0, pBuf, 4096, &nRead, NULL ) )
+						if ( DeviceIoControl( hFile, FSCTL_GET_REPARSE_POINT, nullptr, 0, pBuf, 4096, &nRead, nullptr ) )
 						{
 							const REPARSE_DATA_BUFFER* pReparse = (const REPARSE_DATA_BUFFER*)(const BYTE*)pBuf;
 							CString sReparse;
@@ -260,7 +260,7 @@ void CSageLinksDlg::Thread()
 				}
 				else
 				{
-					const size_t len = _tcslen( wfa.cFileName );
+					const size_t len = _tcsnlen( wfa.cFileName, _countof( wfa.cFileName ) );
 					if ( len > 4 && _tcscmp( wfa.cFileName + len - 4, _T( ".lnk" ) ) == 0 )
 					{
 						// Shortcut
@@ -277,7 +277,7 @@ void CSageLinksDlg::Thread()
 							if ( pLinkFile && SUCCEEDED( hres = pLinkFile->Load( sPath, STGM_READ ) ) )
 							{
 								CString sLinkPath;
-								hres = pShellLink->GetPath( sLinkPath.GetBuffer( LONG_PATH ), LONG_PATH, NULL, SLGP_RAWPATH );
+								hres = pShellLink->GetPath( sLinkPath.GetBuffer( LONG_PATH ), LONG_PATH, nullptr, SLGP_RAWPATH );
 								sLinkPath.ReleaseBuffer();
 								if ( hres == S_OK )
 								{
@@ -356,11 +356,11 @@ void CSageLinksDlg::Thread()
 								else if ( hres == S_FALSE )
 								{
 									// Non-file link
-									PIDLIST_ABSOLUTE pidl = NULL;
+									PIDLIST_ABSOLUTE pidl = nullptr;
 									hres = pShellLink->GetIDList( &pidl );
 									if ( hres == S_OK )
 									{
-										LPWSTR pName = NULL;
+										LPWSTR pName = nullptr;
 										if ( fnSHGetNameFromIDList )
 										{
 											hres = fnSHGetNameFromIDList( pidl, SIGDN_NORMALDISPLAY, &pName );

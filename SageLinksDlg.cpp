@@ -45,7 +45,7 @@ CSageLinksDlg::CSageLinksDlg(CWnd* pParent /*=NULL*/)
 	: CDialogExSized	( IDD_SAGELINKS_DIALOG, pParent )
 	, m_sPath	( theApp.GetProfileString( OPT_SECTION, OPT_PATH, _T("C:\\") ) )
 	, m_hIcon	( AfxGetApp()->LoadIcon( IDR_MAINFRAME ) )
-	, m_hThread	( NULL )
+	, m_hThread	( nullptr )
 	, m_pFlag	( FALSE, TRUE )
 	, m_nTotal	( 0 )
 	, m_nBad	( 0 )
@@ -121,7 +121,7 @@ BOOL CSageLinksDlg::OnInitDialog()
 
 	RestoreWindowPlacement();
 
-	SetTimer( 100, 200, NULL );
+	SetTimer( 100, 200, nullptr );
 
 	Start();
 
@@ -154,7 +154,7 @@ void CSageLinksDlg::Stop()
 		WaitForSingleObject( m_hThread, INFINITE );
 
 		CloseHandle( m_hThread );
-		m_hThread = NULL;
+		m_hThread = nullptr;
 	}
 }
 
@@ -181,7 +181,7 @@ void CSageLinksDlg::Start()
 		m_pFlag.ResetEvent();
 
 		unsigned id;
-		m_hThread = (HANDLE)_beginthreadex( NULL, 0, &CSageLinksDlg::ThreadStub, this, 0, &id );
+		m_hThread = (HANDLE)_beginthreadex( nullptr, 0, &CSageLinksDlg::ThreadStub, this, 0, &id );
 	}
 }
 
@@ -204,7 +204,7 @@ void CSageLinksDlg::OnNewItem(CLink* pLink)
 		++ m_nTotal;
 		if ( ! pLink->m_bResult ) ++ m_nBad;
 
-		const LVITEM itType = { LVIF_IMAGE, index, COL_TYPE, 0, 0, NULL, 0,
+		const LVITEM itType = { LVIF_IMAGE, index, COL_TYPE, 0, 0, nullptr, 0,
 			( ( pLink->m_nType == LinkType::Symbolic ) ? m_nImageSymbolic :
 			( ( pLink->m_nType == LinkType::Junction ) ? m_nImageJunction :
 			( ( pLink->m_nType == LinkType::Shortcut ) ? m_nImageShortcut : m_nImageUnknown ) ) ) };
@@ -213,7 +213,7 @@ void CSageLinksDlg::OnNewItem(CLink* pLink)
 		const LVITEM itTarget = { LVIF_TEXT, index, COL_TARGET, 0, 0, (LPTSTR)(LPCTSTR)pLink->m_sTarget };
 		m_wndList.SetItem( &itTarget );
 
-		const LVITEM itResult = { LVIF_IMAGE, index, COL_RESULT, 0, 0, NULL, 0, pLink->m_bResult ? m_nImageSuccess : m_nImageError };
+		const LVITEM itResult = { LVIF_IMAGE, index, COL_RESULT, 0, 0, nullptr, 0, pLink->m_bResult ? m_nImageSuccess : m_nImageError };
 		m_wndList.SetItem( &itResult );
 
 		m_bSort = TRUE;
@@ -358,7 +358,7 @@ void CSageLinksDlg::OnNMDblclkList(NMHDR *pNMHDR, LRESULT *pResult)
 		CWaitCursor wc;
 
 		const CLink* pLink = (const CLink*)m_wndList.GetItemData( pNMItemActivate->iItem );
-		ShellExecute( GetSafeHwnd(), NULL, _T("explorer.exe"), _T("/select, \"") + pLink->m_sSource + _T("\""), NULL, SW_SHOWNORMAL );
+		ShellExecute( GetSafeHwnd(), nullptr, _T("explorer.exe"), _T("/select, \"") + pLink->m_sSource + _T("\""), nullptr, SW_SHOWNORMAL );
 	}
 
 	*pResult = 0;
@@ -456,7 +456,7 @@ void CSageLinksDlg::SortList()
 	}
 }
 
-int CALLBACK CSageLinksDlg::SortFunc( LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort )
+int CALLBACK CSageLinksDlg::SortFunc(LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort)
 {
 	int nRetVal = 0;
 
@@ -471,7 +471,7 @@ int CALLBACK CSageLinksDlg::SortFunc( LPARAM lParam1, LPARAM lParam2, LPARAM lPa
 		break;
 
 	case COL_TYPE:
-		nRetVal = pData1->m_nType - pData2->m_nType;
+		nRetVal = (int)pData1->m_nType - (int)pData2->m_nType;
 		break;
 
 	case COL_TARGET:
@@ -486,7 +486,7 @@ int CALLBACK CSageLinksDlg::SortFunc( LPARAM lParam1, LPARAM lParam2, LPARAM lPa
 	if ( nRetVal == 0 )
 		nRetVal = pData1->m_bResult - pData2->m_bResult;
 	if ( nRetVal == 0 )
-		nRetVal = pData1->m_nType - pData2->m_nType;
+		nRetVal = (int)pData1->m_nType - (int)pData2->m_nType;
 	if ( nRetVal == 0 )
 		nRetVal = pData1->m_sSource.CompareNoCase( pData2->m_sSource );
 	if ( nRetVal == 0 )

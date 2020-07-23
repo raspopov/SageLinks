@@ -22,16 +22,16 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 class CShellItem
 {
 public:
-	CShellItem(LPCTSTR szFullPath, void** ppFolder = NULL, HWND hWnd = NULL)
-		: m_pidl	( NULL )
-		, m_pLastId	( NULL )
+	CShellItem(LPCTSTR szFullPath, void** ppFolder = nullptr, HWND hWnd = nullptr)
+		: m_pidl	( nullptr )
+		, m_pLastId	( nullptr )
 	{
 		CComPtr< IShellFolder > pDesktop;
 		HRESULT hr = SHGetDesktopFolder( &pDesktop );
 		if ( FAILED( hr ) )
 			return;
 
-		hr = pDesktop->ParseDisplayName( hWnd, 0, CT2OLE( szFullPath ), NULL, &m_pidl, NULL );
+		hr = pDesktop->ParseDisplayName( hWnd, 0, CT2OLE( szFullPath ), nullptr, &m_pidl, nullptr );
 		if ( FAILED( hr ) )
 			return;
 
@@ -41,7 +41,7 @@ public:
 		{
 			USHORT temp = m_pLastId->mkid.cb;
 			m_pLastId->mkid.cb = 0;
-			hr = pDesktop->BindToObject( m_pidl, NULL, IID_IShellFolder, ppFolder );
+			hr = pDesktop->BindToObject( m_pidl, nullptr, IID_IShellFolder, ppFolder );
 			m_pLastId->mkid.cb = temp;
 		}
 	}
@@ -68,13 +68,13 @@ class CShellList : public CList< CShellItem* >
 {
 public:
 	CShellList(const CStringList& oFiles)
-		: m_pID	( NULL )
+		: m_pID	( nullptr )
 	{
 		for ( POSITION pos = oFiles.GetHeadPosition(); pos; )
 		{
 			const CString strPath = oFiles.GetNext( pos );
 
-			CShellItem* pItemIDList = new CShellItem( strPath, ( m_pFolder ? NULL : (void**)&m_pFolder ) );	// Get only one
+			CShellItem* pItemIDList = new (std::nothrow) CShellItem( strPath, ( m_pFolder ? nullptr : (void**)&m_pFolder ) );	// Get only one
 			if ( ! pItemIDList )
 				// Out of memory
 				return;
@@ -90,7 +90,7 @@ public:
 			// No files
 			return;
 
-		m_pID.Attach( new PCUITEMID_CHILD[ GetCount() ] );
+		m_pID.Attach( new (std::nothrow) PCUITEMID_CHILD[ GetCount() ] );
 		if ( ! m_pID )
 			// Out of memory
 			return;
@@ -112,7 +112,7 @@ public:
 	// Creates menu from file paths list
 	inline bool GetMenu(HWND hWnd, void** ppContextMenu) noexcept
 	{
-		return m_pFolder && SUCCEEDED( m_pFolder->GetUIObjectOf( hWnd, (UINT)GetCount(), m_pID, IID_IContextMenu, NULL, ppContextMenu ) );
+		return m_pFolder && SUCCEEDED( m_pFolder->GetUIObjectOf( hWnd, (UINT)GetCount(), m_pID, IID_IContextMenu, nullptr, ppContextMenu ) );
 	}
 
 protected:
