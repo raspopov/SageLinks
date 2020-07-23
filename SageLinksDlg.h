@@ -33,6 +33,8 @@ public:
 
 	afx_msg BOOL OnKeyDown( UINT nChar, UINT nRepCnt, UINT nFlags );
 
+	CString				m_sPath;			// Initial path
+
 protected:
 	enum LinkType { Unknown, Symbolic, Junction, Shortcut };
 

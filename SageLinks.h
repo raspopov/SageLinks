@@ -44,3 +44,5 @@ extern CSageLinksApp theApp;
 
 #define OPT_SECTION		_T("Settings")
 #define OPT_PATH		_T("Path")
+
+CString ErrorMessage(HRESULT hr);

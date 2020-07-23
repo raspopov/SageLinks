@@ -238,12 +238,15 @@ if "%iscc%"=="" ( echo Inno Setup not found! &amp;&amp; exit /b 1 )
     <ClInclude Include="Resource.h" />
     <ClInclude Include="SageLinks.h" />
     <ClInclude Include="SageLinksDlg.h" />
+    <ClInclude Include="Shell.h" />
+    <ClInclude Include="ShellMenu.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="SageLinks.cpp" />
     <ClCompile Include="SageLinksDlg.cpp" />
+    <ClCompile Include="SageLinksThread.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

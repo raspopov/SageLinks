@@ -59,8 +59,7 @@ BOOL CSageLinksApp::InitInstance()
 
 	AfxEnableControlContainer();
 
-	// Create the shell manager, in case the dialog contains
-	// any shell tree view or shell list view controls.
+	// Create the shell manager, in case the dialog contains any shell tree view or shell list view controls.
 	CAutoPtr< CShellManager > pShellManager( new CShellManager );
 
 	// Activate "Windows Native" visual manager for enabling themes in MFC controls
@@ -68,7 +67,16 @@ BOOL CSageLinksApp::InitInstance()
 
 	SetRegistryKey( AFX_IDS_COMPANY_NAME );
 
+	// Parse initial folder
+	CCommandLineInfo cmdInfo;
+	ParseCommandLine( cmdInfo );
+
 	CSageLinksDlg dlg;
+	if ( ! cmdInfo.m_strFileName.IsEmpty() )
+	{
+		dlg.m_sPath = cmdInfo.m_strFileName.Trim( _T(" \"") );
+	}
+
 	m_pMainWnd = &dlg;
 	dlg.DoModal();
 
@@ -90,4 +98,67 @@ BOOL CSageLinksApp::ProcessMessageFilter(int code, LPMSG lpMsg)
 	}
 
 	return CWinApp::ProcessMessageFilter( code, lpMsg );
+}
+
+CString ErrorMessage(HRESULT hr)
+{
+	static const LPCTSTR szModules [] =
+	{
+		_T("user32.dll"),
+		_T("netapi32.dll"),
+		_T("netmsg.dll"),
+		_T("netevent.dll"),
+		_T("spmsg.dll"),
+		_T("wininet.dll"),
+		_T("ntdll.dll"),
+		_T("ntdsbmsg.dll"),
+		_T("mprmsg.dll"),
+		_T("IoLogMsg.dll"),
+		_T("NTMSEVT.DLL"),
+		_T("ws2_32.dll")
+	};
+
+	CString sError;
+
+	if ( hr == ERROR_EXTENDED_ERROR )
+	{
+		CString sDescription, sProvider;
+		DWORD err = hr;
+		DWORD result = WNetGetLastError( &err, sDescription.GetBuffer( 1024 ), 1024, sProvider.GetBuffer( 256 ), 256 );
+		sDescription.ReleaseBuffer();
+		sProvider.ReleaseBuffer();
+		if ( NO_ERROR == result )
+		{
+			sError = sDescription;
+		}
+	}
+
+	if ( sError.IsEmpty() )
+	{
+		LPTSTR lpszTemp = NULL;
+		FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, hr, 0, (LPTSTR)&lpszTemp, 0, NULL );
+		for ( int i = 0; ! lpszTemp && i < _countof( szModules ); ++i )
+		{
+			if ( HMODULE hModule = LoadLibraryEx( szModules[ i ], NULL, LOAD_LIBRARY_AS_DATAFILE ) )
+			{
+				FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_HMODULE, hModule, hr, 0, (LPTSTR)&lpszTemp, 0, NULL );
+				FreeLibrary( hModule );
+			}
+		}
+
+		if ( lpszTemp )
+		{
+			sError = lpszTemp;
+			LocalFree( lpszTemp );
+		}
+	}
+
+	if ( sError.IsEmpty() )
+	{
+		sError.LoadString( IDS_UNKNOWN_ERROR );
+	}
+
+	sError.TrimRight( _T(" \r\n") );
+	sError.AppendFormat( _T(" (0x%08x)"), hr );
+	return sError;
 }
