@@ -1,6 +1,7 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/xetag3g94r0rqk7m?svg=true)](https://ci.appveyor.com/project/raspopov/sagelinks)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/ab525a50b4604c9eb262df5376208773)](https://www.codacy.com/manual/raspopov/SageLinks?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=raspopov/SageLinks&amp;utm_campaign=Badge_Grade)
 
- SageLinks
+SageLinks
 ---------------------
 
 Shows and checks Windows NTFS junctions, symbolic links and shortcuts.
@@ -15,7 +16,7 @@ Windows XP, Windows Vista, Windows 7, Windows 8, Windows 10 32/64-bit.
  License
 ------------
 
-Copyright (C) 2015-2017 Nikolay Raspopov <<raspopov@cherubicsoft.com>>
+Copyright (C) 2015-2020 Nikolay Raspopov <<raspopov@cherubicsoft.com>>
     
 This program is free software : you can redistribute it and / or modify
 it under the terms of the GNU General Public License as published by
