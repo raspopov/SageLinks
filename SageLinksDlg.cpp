@@ -81,6 +81,7 @@ BEGIN_MESSAGE_MAP(CSageLinksDlg, CDialogExSized)
 	ON_NOTIFY( LVN_GETDISPINFO, IDC_LIST, &CSageLinksDlg::OnLvnGetdispinfoList )
 	ON_NOTIFY( LVN_ODCACHEHINT, IDC_LIST, &CSageLinksDlg::OnLvnOdcachehintList )
 	ON_NOTIFY( LVN_ODFINDITEM, IDC_LIST, &CSageLinksDlg::OnLvnOdfinditemList )
+	ON_BN_CLICKED( IDC_DELETE, &CSageLinksDlg::OnBnClickedDelete )
 END_MESSAGE_MAP()
 
 // CSageLinksDlg message handlers
@@ -209,6 +210,8 @@ void CSageLinksDlg::OnNewItem(CLink* link)
 
 void CSageLinksDlg::OnTimer(UINT_PTR nIDEvent)
 {
+	GetDlgItem( IDC_DELETE )->EnableWindow( m_wndList.GetFirstSelectedItemPosition() != nullptr );
+
 	CSingleLock oLock( &m_pSection, TRUE );
 
 	const UINT nOldTotal = m_wndList.GetItemCount();
@@ -352,7 +355,7 @@ void CSageLinksDlg::OnNMDblclkList(NMHDR *pNMHDR, LRESULT *pResult)
 	}
 }
 
-void CSageLinksDlg::OnNMRClickList( NMHDR *pNMHDR, LRESULT *pResult )
+void CSageLinksDlg::OnNMRClickList(NMHDR *pNMHDR, LRESULT *pResult)
 {
 	LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>( pNMHDR );
 	*pResult = 0;
@@ -390,7 +393,7 @@ void CSageLinksDlg::OnNMRClickList( NMHDR *pNMHDR, LRESULT *pResult )
 			for ( auto i : oIndexes )
 			{
 				const CLink* plink = m_pList.at( i );
-				if ( ! IsExist( plink->m_sSource ) )
+				if ( ! plink->IsExist() )
 				{
 					if ( ! plink->m_bResult )
 					{
@@ -502,57 +505,69 @@ void CSageLinksDlg::ClearList()
 	m_nBad = 0;
 }
 
+void CSageLinksDlg::OnBnClickedDelete()
+{
+	CSingleLock oLock( &m_pSection, TRUE );
+
+	// Count selected items
+	std::vector< int > oIndexes;
+	for ( POSITION pos = m_wndList.GetFirstSelectedItemPosition(); pos; )
+	{
+		oIndexes.push_back( m_wndList.GetNextSelectedItem( pos ) );
+	}
+
+	// From end to start
+	std::sort( oIndexes.begin(), oIndexes.end(), std::greater< int >() );
+
+	// Ask user
+	if ( UINT nCount = oIndexes.size() )
+	{
+		CString sPrompt;
+		sPrompt.Format( IDS_DELETE_CONFIRM, nCount );
+		if ( AfxMessageBox( sPrompt, MB_YESNO | MB_ICONQUESTION ) == IDYES )
+		{
+			// Delete selected items
+
+			CWaitCursor wc;
+
+			for ( auto i : oIndexes )
+			{
+				const CLink* plink = m_pList.at( i );
+				if ( plink->DeleteFile() )
+				{
+					if ( ! plink->m_bResult )
+					{
+						--m_nBad;
+					}
+
+					delete plink;
+
+					m_pList.erase( m_pList.begin() + i );
+
+					m_wndList.SetItemState( i, 0, LVIS_SELECTED );
+				}
+			}
+
+			m_wndList.SetItemCountEx( m_pList.size(), LVSICF_NOINVALIDATEALL | LVSICF_NOSCROLL );
+			m_wndList.InvalidateRect( nullptr );
+		}
+	}
+}
+
 BOOL CSageLinksDlg::OnKeyDown(UINT nChar, UINT /*nRepCnt*/, UINT /*nFlags*/)
 {
-	if ( nChar == VK_DELETE )
+	if ( nChar == VK_F5 )
+	{
+		Start();
+
+		return TRUE;
+	}
+	else if ( nChar == VK_DELETE )
 	{
 		if ( GetFocus() == static_cast< CWnd*>( &m_wndList ) )
 		{
-			CSingleLock oLock( &m_pSection, TRUE );
+			OnBnClickedDelete();
 
-			// Count selected items
-			std::vector< int > oIndexes;
-			for ( POSITION pos = m_wndList.GetFirstSelectedItemPosition(); pos; )
-			{
-				oIndexes.push_back( m_wndList.GetNextSelectedItem( pos ) );
-			}
-
-			// From end to start
-			std::sort( oIndexes.begin(), oIndexes.end(), std::greater< int >() );
-
-			// Ask user
-			if ( UINT nCount = oIndexes.size() )
-			{
-				CString sPrompt;
-				sPrompt.Format( IDS_DELETE_CONFIRM, nCount );
-				if ( AfxMessageBox( sPrompt, MB_YESNO | MB_ICONQUESTION ) == IDYES )
-				{
-					// Delete selected items
-
-					CWaitCursor wc;
-
-					for ( auto i : oIndexes )
-					{
-						const CLink* plink = m_pList.at( i );
-						if ( plink->DeleteFile() )
-						{
-							if ( ! plink->m_bResult )
-							{
-								--m_nBad;
-							}
-
-							delete plink;
-
-							m_pList.erase( m_pList.begin() + i );
-
-							m_wndList.SetItemState( i, 0, LVIS_SELECTED );
-						}
-					}
-
-					m_wndList.SetItemCountEx( m_pList.size(), LVSICF_NOINVALIDATEALL | LVSICF_NOSCROLL );
-					m_wndList.InvalidateRect( nullptr );
-				}
-			}
 			return TRUE;
 		}
 	}

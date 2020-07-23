@@ -63,7 +63,12 @@ protected:
 			}
 		}
 
-		inline BOOL DeleteFile() const noexcept
+		inline bool IsExist() const noexcept
+		{
+			return ::IsExist( m_sSource ) || ::IsExist( LONG_PREFIX + m_sSource );
+		}
+
+		inline bool DeleteFile() const noexcept
 		{
 			return ::DeleteFile( m_sSource ) || ::DeleteFile( LONG_PREFIX + m_sSource );
 		}
@@ -124,6 +129,7 @@ protected:
 	afx_msg void OnLvnOdcachehintList( NMHDR *pNMHDR, LRESULT *pResult );
 	afx_msg void OnLvnOdfinditemList( NMHDR *pNMHDR, LRESULT *pResult );
 	afx_msg void OnHdnItemclickList( NMHDR *pNMHDR, LRESULT *pResult );
+	afx_msg void OnBnClickedDelete();
 
 	DECLARE_MESSAGE_MAP()
 };
