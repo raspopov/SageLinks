@@ -56,7 +56,6 @@
     </None>
     <None Include="LICENSE" />
     <None Include="README.md" />
-    <None Include="packages.config" />
     <None Include="setup\setup.iss">
       <Filter>Setup</Filter>
     </None>
@@ -69,6 +68,7 @@
     <None Include="setup\dep\dep.iss">
       <Filter>Setup</Filter>
     </None>
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\SageLinks.ico">
