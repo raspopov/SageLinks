@@ -42,7 +42,7 @@ static char THIS_FILE[] = __FILE__;
 // CSageLinksDlg dialog
 
 CSageLinksDlg::CSageLinksDlg(CWnd* pParent /*=NULL*/)
-	: CDialog	( IDD_SAGELINKS_DIALOG, pParent )
+	: CDialogExSized	( IDD_SAGELINKS_DIALOG, pParent )
 	, m_sPath	( theApp.GetProfileString( OPT_SECTION, OPT_PATH, _T("C:\\") ) )
 	, m_hIcon	( AfxGetApp()->LoadIcon( IDR_MAINFRAME ) )
 	, m_hThread	( NULL )
@@ -68,7 +68,9 @@ void CSageLinksDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control( pDX, IDC_BROWSE, m_wndBrowse );
 }
 
-BEGIN_MESSAGE_MAP(CSageLinksDlg, CDialog)
+IMPLEMENT_DYNAMIC(CSageLinksDlg, CDialogExSized)
+
+BEGIN_MESSAGE_MAP(CSageLinksDlg, CDialogExSized)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_WM_TIMER()
@@ -116,6 +118,8 @@ BOOL CSageLinksDlg::OnInitDialog()
 	m_wndList.GetHeaderCtrl()->SetItem( COL_RESULT, &it );
 
 	m_wndBrowse.SetWindowText( m_sPath );
+
+	RestoreWindowPlacement();
 
 	SetTimer( 100, 200, NULL );
 

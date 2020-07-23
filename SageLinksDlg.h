@@ -19,10 +19,14 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 
 #pragma once
 
+#include "DialogExSized.h"
+
 // CSageLinksDlg dialog
 
-class CSageLinksDlg : public CDialog
+class CSageLinksDlg : public CDialogExSized
 {
+	DECLARE_DYNAMIC(CSageLinksDlg)
+
 public:
 	CSageLinksDlg(CWnd* pParent = NULL);	// standard constructor
 

@@ -39,6 +39,9 @@
     <ClInclude Include="ShellMenu.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="DialogExSized.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="SageLinks.cpp">
@@ -51,6 +54,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="SageLinksThread.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogExSized.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

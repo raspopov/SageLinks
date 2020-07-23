@@ -235,6 +235,7 @@ if "%iscc%"=="" ( echo Inno Setup not found! &amp;&amp; exit /b 1 )
     </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="DialogExSized.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="SageLinks.h" />
     <ClInclude Include="SageLinksDlg.h" />
@@ -244,6 +245,7 @@ if "%iscc%"=="" ( echo Inno Setup not found! &amp;&amp; exit /b 1 )
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="DialogExSized.cpp" />
     <ClCompile Include="SageLinks.cpp" />
     <ClCompile Include="SageLinksDlg.cpp" />
     <ClCompile Include="SageLinksThread.cpp" />
