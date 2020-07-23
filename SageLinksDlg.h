@@ -1,7 +1,7 @@
 /*
 This file is part of SageLinks
 
-Copyright (C) 2015-2017 Nikolay Raspopov <raspopov@cherubicsoft.com>
+Copyright (C) 2015-2020 Nikolay Raspopov <raspopov@cherubicsoft.com>
 
 This program is free software : you can redistribute it and / or modify
 it under the terms of the GNU General Public License as published by
@@ -18,7 +18,6 @@ along with this program.If not, see < http://www.gnu.org/licenses/>.
 */
 
 #pragma once
-
 
 // CSageLinksDlg dialog
 
@@ -48,7 +47,7 @@ protected:
 			, m_bResult	( bResult )
 		{
 		}
-		
+
 		inline ~CLink()
 		{
 			if ( m_hIcon ) DestroyIcon( m_hIcon );
@@ -73,7 +72,7 @@ protected:
 
 	int					m_nTotal;			// Total links
 	int					m_nBad;				// Bad links
-	
+
 	BOOL				m_bSort;			// Sort needed
 	CListCtrl			m_wndList;
 	CStatic				m_wndStatus;

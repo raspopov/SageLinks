@@ -3,7 +3,7 @@
 /*
 This file is part of SageLinks
 
-Copyright (C) 2015-2017 Nikolay Raspopov <raspopov@cherubicsoft.com>
+Copyright (C) 2015-2020 Nikolay Raspopov <raspopov@cherubicsoft.com>
 
 This program is free software : you can redistribute it and / or modify
 it under the terms of the GNU General Public License as published by
@@ -169,7 +169,7 @@ CString ErrorMessage(HRESULT hr)
 		{
 			sError = sDescription;
 		}
-	} 
+	}
 
 	if ( sError.IsEmpty() )
 	{
@@ -178,7 +178,7 @@ CString ErrorMessage(HRESULT hr)
 		for ( int i = 0; ! lpszTemp && i < _countof( szModules ); ++i )
 		{
 			if ( HMODULE hModule = LoadLibraryEx( szModules[ i ], NULL, LOAD_LIBRARY_AS_DATAFILE ) )
-			{			
+			{
 				FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_HMODULE, hModule, hr, 0, (LPTSTR)&lpszTemp, 0, NULL );
 				FreeLibrary( hModule );
 			}
@@ -244,6 +244,12 @@ CSageLinksDlg::CSageLinksDlg(CWnd* pParent /*=NULL*/)
 	, m_nTotal	( 0 )
 	, m_nBad	( 0 )
 	, m_bSort	( FALSE )
+	, m_nImageSuccess	( 0 )
+	, m_nImageError		( 0 )
+	, m_nImageUnknown	( 0 )
+	, m_nImageSymbolic	( 0 )
+	, m_nImageJunction	( 0 )
+	, m_nImageShortcut	( 0 )
 {
 }
 
@@ -289,7 +295,7 @@ BOOL CSageLinksDlg::OnInitDialog()
 
 	m_wndList.SetImageList( &m_oImages, LVSIL_SMALL );
 	m_wndList.SetExtendedStyle( m_wndList.GetExtendedStyle() | LVS_EX_DOUBLEBUFFER | LVS_EX_FULLROWSELECT | LVS_EX_LABELTIP | LVS_EX_SUBITEMIMAGES );
-	
+
 	CRect rc;
 	m_wndList.GetClientRect( &rc );
 	const int width = ( rc.Width() - CX_ICON - CX_ICON - GetSystemMetrics( SM_CXVSCROLL ) - 5 ) / 2;
@@ -478,7 +484,7 @@ void CSageLinksDlg::Thread()
 					// Reparse point
 					const CString sPath( sDir + _T( "\\" ) + wfa.cFileName );
 					CString sTarget;
-					
+
 					BOOL bResult = FALSE;
 					HANDLE hFile = CreateFile( sPath, FILE_READ_ATTRIBUTES,
 						FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING,
@@ -500,13 +506,13 @@ void CSageLinksDlg::Thread()
 								sReparse.Append( pReparse->SymbolicLinkReparseBuffer.PathBuffer + pReparse->SymbolicLinkReparseBuffer.SubstituteNameOffset / sizeof( WCHAR ),
 									pReparse->SymbolicLinkReparseBuffer.SubstituteNameLength / sizeof( WCHAR ) );
 							}
-							
+
 							if ( _tcsncmp( sReparse, _T("\\??\\"), 4 ) == 0 )
 								sReparse = sReparse.Mid( 4 );
 
 							if ( _tcsncmp( sReparse, _T( "\\\\?\\" ), 4 ) == 0 )
 								sReparse = sReparse.Mid( 4 );
-							
+
 							if ( ! sReparse.IsEmpty() )
 							{
 								if ( ! IsLocal( sReparse ) && ! IsUNC( sReparse ) )
@@ -613,7 +619,7 @@ void CSageLinksDlg::Thread()
 										const CString sRemoteTarget = GetRemotedPath( sPath, sTarget );
 										if ( ! sRemoteTarget.IsEmpty() )
 										{
-											// Target path is local and source path is rooted UNC											
+											// Target path is local and source path is rooted UNC
 											bResult = ( GetFileAttributes( sRemoteTarget ) != INVALID_FILE_ATTRIBUTES );
 											if ( bResult )
 												sTarget = sRemoteTarget;
@@ -754,7 +760,7 @@ void CSageLinksDlg::OnNewItem(CLink* pLink)
 			( ( pLink->m_nType == LinkType::Junction ) ? m_nImageJunction :
 			( ( pLink->m_nType == LinkType::Shortcut ) ? m_nImageShortcut : m_nImageUnknown ) ) ) };
 		m_wndList.SetItem( &itType );
-	
+
 		const LVITEM itTarget = { LVIF_TEXT, index, COL_TARGET, 0, 0, (LPTSTR)(LPCTSTR)pLink->m_sTarget };
 		m_wndList.SetItem( &itTarget );
 
