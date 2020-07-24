@@ -38,7 +38,7 @@ public:
 	CString				m_sPath;			// Initial path
 
 protected:
-	enum LinkType { Unknown, Symbolic, Junction, Shortcut };
+	enum LinkType { Unknown = 0, Symbolic, Junction, Shortcut, AppX };
 
 	class CLink
 	{
@@ -66,12 +66,12 @@ protected:
 
 		inline bool IsExist() const noexcept
 		{
-			return ::IsExist( m_sSource ) || ::IsExist( LONG_PREFIX + m_sSource );
+			return ::IsExist( m_sSource );
 		}
 
 		inline bool DeleteFile() const noexcept
 		{
-			return ::DeleteFile( m_sSource ) || ::DeleteFile( LONG_PREFIX + m_sSource );
+			return ::DeleteFile( IsUNC( m_sSource ) ? m_sSource : ( LONG_PREFIX + m_sSource ) );
 		}
 
 		LinkType	m_nType;
@@ -88,10 +88,7 @@ protected:
 	CImageList			m_oImages;
 	int					m_nImageSuccess;
 	int					m_nImageError;
-	int					m_nImageUnknown;
-	int					m_nImageSymbolic;
-	int					m_nImageJunction;
-	int					m_nImageShortcut;
+	int					m_nImageType[ 5 ];
 
 	int					m_nBad;				// Bad links
 	int					m_nSort;			// Sort column
@@ -111,6 +108,7 @@ protected:
 	void Stop();
 	void Start();
 
+	void DeSelect();
 	void SortList();
 	void ClearList();
 	void OnNewItem(CLink* link);

@@ -264,14 +264,9 @@ if "%iscc%"=="" ( echo Inno Setup not found! &amp;&amp; exit /b 1 )
     <None Include="packages.config" />
     <None Include="README.md" />
     <None Include="res\SageLinks.rc2" />
-    <None Include="setup\dep\dep.iss" />
-    <None Include="setup\idp\idp.iss" />
-    <None Include="setup\setup.iss">
-      <FileType>Document</FileType>
-    </None>
-    <None Include="setup\vc_redist.iss" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="res\appx.ico" />
     <Image Include="res\error.ico" />
     <Image Include="res\junction.ico" />
     <Image Include="res\SageLinks.ico" />

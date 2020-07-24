@@ -13,9 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Setup">
-      <UniqueIdentifier>{d891b33f-0880-4f46-bd46-b72244de3f82}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SageLinks.h">
@@ -71,18 +68,6 @@
     </None>
     <None Include="LICENSE" />
     <None Include="README.md" />
-    <None Include="setup\setup.iss">
-      <Filter>Setup</Filter>
-    </None>
-    <None Include="setup\vc_redist.iss">
-      <Filter>Setup</Filter>
-    </None>
-    <None Include="setup\idp\idp.iss">
-      <Filter>Setup</Filter>
-    </None>
-    <None Include="setup\dep\dep.iss">
-      <Filter>Setup</Filter>
-    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
@@ -105,6 +90,9 @@
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="res\shortcut.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\appx.ico">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>

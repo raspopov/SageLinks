@@ -55,24 +55,37 @@ extern CSageLinksApp theApp;
 
 CString ErrorMessage(HRESULT hr);
 
-inline BOOL IsExist(LPCTSTR szPath) noexcept
-{
-	return ( ::GetFileAttributes( szPath ) != INVALID_FILE_ATTRIBUTES );
-}
-
-inline BOOL IsDots(LPCTSTR szFileName) noexcept
+inline bool IsDots(LPCTSTR szFileName) noexcept
 {
 	return szFileName[ 0 ] == _T('.') && ( szFileName[ 1 ] == 0 || ( szFileName[ 1 ] == _T('.') && szFileName[ 2 ] == 0 ) );
 }
 
-inline BOOL IsLocal(LPCTSTR szFileName) noexcept
+inline bool IsLocal(const CString& sPath) noexcept
 {
-	return _istalpha( szFileName[ 0 ] ) && szFileName[ 1 ] == _T( ':' ) && ( szFileName[ 2 ] == 0 || szFileName[ 2 ] == _T('\\') );
+	return ( sPath.GetLength() > 1 ) && _istalpha( sPath.GetAt( 0 ) ) && sPath.GetAt( 1 ) == _T( ':' ) && ( sPath.GetLength() == 2 || sPath.GetAt( 2 ) == _T('\\') );
 }
 
-inline BOOL IsUNC(LPCTSTR szFileName) noexcept
+inline bool IsUNC(const CString& sPath) noexcept
 {
-	return szFileName[ 0 ] == _T('\\') && szFileName[ 1 ] == _T('\\') && _istalnum( szFileName[ 2 ] );
+	return ( sPath.GetLength() > 2 ) && sPath.GetAt( 0 ) == _T('\\') && sPath.GetAt( 1 ) == _T('\\');
+}
+
+inline bool IsUNCRoot(const CString& sPath) noexcept
+{
+	if ( IsUNC( sPath ) )
+	{
+		const int nRoot = sPath.Find( _T('\\'), 2 );
+		if ( nRoot == -1 || nRoot == sPath.GetLength() - 1 )
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+inline bool IsExist(const CString& sPath) noexcept
+{
+	return IsUNCRoot( sPath ) || ( ::GetFileAttributes( IsUNC( sPath ) ? sPath : ( LONG_PREFIX + sPath ) ) != INVALID_FILE_ATTRIBUTES );
 }
 
 inline CString GetRemotedPath(const CString& sBasePath, const CString& sLocalPath)

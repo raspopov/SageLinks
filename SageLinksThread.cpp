@@ -67,8 +67,7 @@ void CSageLinksDlg::Thread()
 
 	while ( ! m_oDirs.IsEmpty() && WaitForSingleObject( m_pFlag, 0 ) == WAIT_TIMEOUT )
 	{
-		CString sDir = m_oDirs.RemoveHead();
-		sDir.TrimRight( _T("\\") );
+		const CString sDir = m_oDirs.RemoveHead().TrimRight( _T("\\") );
 
 		{
 			CSingleLock oLock( &m_pSection, TRUE );
@@ -105,6 +104,10 @@ void CSageLinksDlg::Thread()
 						nType = LinkType::Symbolic;
 						break;
 
+					case IO_REPARSE_TAG_APPEXECLINK:
+						nType = LinkType::AppX;
+						break;
+
 					default:
 						nType = LinkType::Unknown;
 					}
@@ -115,22 +118,42 @@ void CSageLinksDlg::Thread()
 					if ( hFile != INVALID_HANDLE_VALUE )
 					{
 						nRead = 0;
+						memset( (BYTE*)pBuf, 0, 4096 );
 						if ( DeviceIoControl( hFile, FSCTL_GET_REPARSE_POINT, nullptr, 0, pBuf, 4096, &nRead, nullptr ) )
 						{
-							const REPARSE_DATA_BUFFER* pReparse = (const REPARSE_DATA_BUFFER*)(const BYTE*)pBuf;
 							CString sReparse;
-							if ( wfa.dwReserved0 == IO_REPARSE_TAG_MOUNT_POINT )
+							const REPARSE_DATA_BUFFER* pReparse = (const REPARSE_DATA_BUFFER*)(const BYTE*)pBuf;
+							switch ( wfa.dwReserved0 )
 							{
+							case IO_REPARSE_TAG_MOUNT_POINT:
 								sReparse.Append( pReparse->MountPointReparseBuffer.PathBuffer + pReparse->MountPointReparseBuffer.SubstituteNameOffset / sizeof( WCHAR ),
 									pReparse->MountPointReparseBuffer.SubstituteNameLength / sizeof( WCHAR ) );
-							}
-							else if ( wfa.dwReserved0 == IO_REPARSE_TAG_SYMLINK )
-							{
+								break;
+
+							case IO_REPARSE_TAG_SYMLINK:
 								sReparse.Append( pReparse->SymbolicLinkReparseBuffer.PathBuffer + pReparse->SymbolicLinkReparseBuffer.SubstituteNameOffset / sizeof( WCHAR ),
 									pReparse->SymbolicLinkReparseBuffer.SubstituteNameLength / sizeof( WCHAR ) );
-							}
-							else
-							{
+								break;
+
+							case IO_REPARSE_TAG_APPEXECLINK:
+								{
+									size_t nCount = *(DWORD*)pReparse->GenericReparseBuffer.DataBuffer;
+									if ( nCount == 3 )
+									{
+										LPCWSTR szName = (LPCWSTR)(pReparse->GenericReparseBuffer.DataBuffer + sizeof( DWORD ) );
+										size_t nLeft = pReparse->ReparseDataLength - sizeof( DWORD );
+										for ( ; nLeft && nCount; --nCount )
+										{
+											const size_t nLength = wcsnlen( szName, nLeft / sizeof( WCHAR ) );
+											sReparse = CString( szName, nLength );
+											szName += nLength + 1;
+											nLeft -= ( nLength + 1 ) * sizeof( WCHAR );
+										}
+									}
+								}
+								break;
+
+							default:
 								sResult.Format( IDS_UNKNOWN_REPARSE, wfa.dwReserved0 );
 							}
 
@@ -156,7 +179,12 @@ void CSageLinksDlg::Thread()
 									sReparse = sDir + _T( "\\" ) + sReparse;
 								}
 
-								sTarget = sReparse;
+								const BOOL bCanonicalized = PathCanonicalize( sTarget.GetBuffer( MAX_PATH ), sReparse );
+								sTarget.ReleaseBuffer();
+								if ( ! bCanonicalized )
+								{
+									sTarget = sReparse;
+								}
 
 								if ( bUNC )
 								{
@@ -176,11 +204,6 @@ void CSageLinksDlg::Thread()
 								if ( ! bResult )
 								{
 									bResult = IsExist( sTarget );
-									if ( ! bResult  )
-									{
-										bResult = IsExist( LONG_PREFIX + sTarget );
-									}
-
 								}
 
 								if ( ! bResult )
@@ -191,6 +214,7 @@ void CSageLinksDlg::Thread()
 							}
 							else
 							{
+								bResult = TRUE;
 								TRACE( _T("No Target : %s\n"), (LPCTSTR)sPath );
 							}
 						}
@@ -208,12 +232,9 @@ void CSageLinksDlg::Thread()
 						TRACE( _T("Open Error %s : %s\n"), (LPCTSTR)sResult, (LPCTSTR)sPath );
 					}
 
-					if ( nType != LinkType::Unknown )
-					{
-						SHFILEINFO sfi = {};
-						SHGetFileInfo( bResult ? sTarget : sPath, 0, &sfi, sizeof( sfi ), SHGFI_ICON | SHGFI_SMALLICON );
-						OnNewItem( new CLink( nType, sfi.hIcon, sPath, sTarget, sResult, bResult ) );
-					}
+					SHFILEINFO sfi = {};
+					SHGetFileInfo( bResult ? sTarget : sPath, 0, &sfi, sizeof( sfi ), SHGFI_ICON | SHGFI_SMALLICON );
+					OnNewItem( new CLink( nType, sfi.hIcon, sPath, sTarget, sResult, bResult ) );
 				}
 				else if ( ( wfa.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY ) != 0 )
 				{
@@ -233,20 +254,30 @@ void CSageLinksDlg::Thread()
 						{
 							CComQIPtr< IPersistFile > pLinkFile( pShellLink );
 							if ( pLinkFile &&
-								( SUCCEEDED( hres = pLinkFile->Load( sPath, STGM_READ ) ) ||
-								  SUCCEEDED( hres = pLinkFile->Load( LONG_PREFIX + sPath, STGM_READ ) ) ) )
+								( SUCCEEDED( hres = pLinkFile->Load( IsUNC( sPath ) ? sPath : ( LONG_PREFIX + sPath ), STGM_READ ) ) ) )
 							{
 								CString sLinkPath;
 								hres = pShellLink->GetPath( sLinkPath.GetBuffer( LONG_PATH ), LONG_PATH, nullptr, SLGP_RAWPATH );
 								sLinkPath.ReleaseBuffer();
 								if ( hres == S_OK )
 								{
-									// Expand environment if any
-									CString sExpanded;
-									ExpandEnvironmentStrings( sLinkPath, sExpanded.GetBuffer( LONG_PATH ), LONG_PATH );
-									sExpanded.ReleaseBuffer();
+									sLinkPath.Replace( _T('/'), _T('\\') );
 
-									sTarget = sExpanded;
+									// Expand environment if any
+									CString sReparse;
+									const BOOL bExpanded = ExpandEnvironmentStrings( sLinkPath, sReparse.GetBuffer( LONG_PATH ), LONG_PATH );
+									sReparse.ReleaseBuffer();
+									if ( ! bExpanded )
+									{
+										sReparse = sLinkPath;
+									}
+
+									const BOOL bCanonicalized = PathCanonicalize( sTarget.GetBuffer( MAX_PATH ), sReparse );
+									sTarget.ReleaseBuffer();
+									if ( ! bCanonicalized )
+									{
+										sTarget = sReparse;
+									}
 
 									if ( bUNC )
 									{
@@ -280,10 +311,6 @@ void CSageLinksDlg::Thread()
 									if ( ! bResult )
 									{
 										bResult = IsExist( sTarget );
-										if ( ! bResult )
-										{
-											bResult = IsExist( LONG_PREFIX + sTarget );
-										}
 
 										// Try changing 32-bit to 64-bit Program Files
 										if ( ! bResult && ! sProgramFiles64.IsEmpty() && _tcsncicmp( sTarget, sProgramFiles32, sProgramFiles32.GetLength() ) == 0 )
@@ -293,14 +320,6 @@ void CSageLinksDlg::Thread()
 											if ( bResult )
 											{
 												sTarget = sTarget64;
-											}
-											else
-											{
-												bResult = IsExist( LONG_PREFIX + sTarget64 );
-												if ( bResult )
-												{
-													sTarget = sTarget64;
-												}
 											}
 										}
 									}
@@ -365,12 +384,9 @@ void CSageLinksDlg::Thread()
 							TRACE( _T("Failed CoCreateInstance() %s : %s\n"), (LPCTSTR)sResult, (LPCTSTR)sPath );
 						}
 
-						if ( nType != LinkType::Unknown )
-						{
-							SHFILEINFO sfi = {};
-							SHGetFileInfo( sPath, 0, &sfi, sizeof( sfi ), SHGFI_ICON | SHGFI_SMALLICON );
-							OnNewItem( new CLink( nType, sfi.hIcon, sPath, sTarget, sResult, bResult ) );
-						}
+						SHFILEINFO sfi = {};
+						SHGetFileInfo( sPath, 0, &sfi, sizeof( sfi ), SHGFI_ICON | SHGFI_SMALLICON );
+						OnNewItem( new CLink( nType, sfi.hIcon, sPath, sTarget, sResult, bResult ) );
 					}
 				}
 			}

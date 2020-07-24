@@ -51,10 +51,7 @@ CSageLinksDlg::CSageLinksDlg(CWnd* pParent /*=NULL*/)
 	, m_nSort			( 0 )
 	, m_nImageSuccess	( 0 )
 	, m_nImageError		( 0 )
-	, m_nImageUnknown	( 0 )
-	, m_nImageSymbolic	( 0 )
-	, m_nImageJunction	( 0 )
-	, m_nImageShortcut	( 0 )
+	, m_nImageType		()
 {
 }
 
@@ -94,12 +91,15 @@ BOOL CSageLinksDlg::OnInitDialog()
 	SetIcon( m_hIcon, FALSE );		// Set small icon
 
 	m_oImages.Create( 16, 16, ILC_COLOR32 | ILC_MASK, 0, 100 );
+
 	m_nImageSuccess = m_oImages.Add( (HICON)LoadImage( AfxGetResourceHandle(), MAKEINTRESOURCE( IDI_RESULT_SUCCESS ), IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR | LR_SHARED ) );
 	m_nImageError = m_oImages.Add( (HICON)LoadImage( AfxGetResourceHandle(), MAKEINTRESOURCE( IDI_RESULT_ERROR ), IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR | LR_SHARED ) );
-	m_nImageUnknown = m_oImages.Add( (HICON)LoadImage( AfxGetResourceHandle(), MAKEINTRESOURCE( IDI_UNKNOWN ), IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR | LR_SHARED ) );
-	m_nImageSymbolic = m_oImages.Add( (HICON)LoadImage( AfxGetResourceHandle(), MAKEINTRESOURCE( IDI_SYMBOLIC ), IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR | LR_SHARED ) );
-	m_nImageJunction = m_oImages.Add( (HICON)LoadImage( AfxGetResourceHandle(), MAKEINTRESOURCE( IDI_JUNCTION ), IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR | LR_SHARED ) );
-	m_nImageShortcut = m_oImages.Add( (HICON)LoadImage( AfxGetResourceHandle(), MAKEINTRESOURCE( IDI_SHORTCUT ), IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR | LR_SHARED ) );
+
+	const UINT nIcons[] = { IDI_UNKNOWN, IDI_SYMBOLIC, IDI_JUNCTION, IDI_SHORTCUT, IDI_APPX };
+	for ( int i = 0; i < _countof( nIcons ); ++i )
+	{
+		m_nImageType[ i ] = m_oImages.Add( (HICON)LoadImage( AfxGetResourceHandle(), MAKEINTRESOURCE( nIcons[ i ] ), IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR | LR_SHARED ) );
+	}
 
 	ASSERT( m_wndList.GetStyle() & LVS_OWNERDATA );
 	m_wndList.SetImageList( &m_oImages, LVSIL_SMALL );
@@ -134,7 +134,7 @@ BOOL CSageLinksDlg::OnInitDialog()
 
 void CSageLinksDlg::OnDestroy()
 {
-	KillTimer( 100 );
+	KillTimer( ID_TIMER );
 
 	Stop();
 
@@ -403,10 +403,10 @@ void CSageLinksDlg::OnNMRClickList(NMHDR *pNMHDR, LRESULT *pResult)
 					delete plink;
 
 					m_pList.erase( m_pList.begin() + i );
-
-					m_wndList.SetItemState( i, 0, LVIS_SELECTED );
 				}
 			}
+
+			DeSelect();
 
 			m_wndList.SetItemCountEx( m_pList.size(), LVSICF_NOINVALIDATEALL | LVSICF_NOSCROLL );
 			m_wndList.InvalidateRect( nullptr );
@@ -442,6 +442,12 @@ void CSageLinksDlg::OnHdnItemclickList( NMHDR *pNMHDR, LRESULT *pResult )
 	SortList();
 
 	*pResult = 0;
+}
+
+void CSageLinksDlg::DeSelect()
+{
+	m_wndList.SetItemState( -1, 0, LVIS_SELECTED | LVIS_FOCUSED );
+	m_wndList.SetSelectionMark( -1 );
 }
 
 void CSageLinksDlg::SortList()
@@ -484,6 +490,8 @@ void CSageLinksDlg::SortList()
 
 				return ( ( ( m_nSort > 0 ) ? nRetVal : ( - nRetVal ) ) > 0 );
 			} );
+
+		DeSelect();
 
 		m_wndList.InvalidateRect( nullptr );
 	}
@@ -543,10 +551,10 @@ void CSageLinksDlg::OnBnClickedDelete()
 					delete plink;
 
 					m_pList.erase( m_pList.begin() + i );
-
-					m_wndList.SetItemState( i, 0, LVIS_SELECTED );
 				}
 			}
+
+			DeSelect();
 
 			m_wndList.SetItemCountEx( m_pList.size(), LVSICF_NOINVALIDATEALL | LVSICF_NOSCROLL );
 			m_wndList.InvalidateRect( nullptr );
@@ -596,7 +604,7 @@ void CSageLinksDlg::OnLvnGetdispinfoList(NMHDR *pNMHDR, LRESULT *pResult)
 		case COL_SOURCE:
 			if ( item.mask & LVIF_IMAGE )
 			{
-				item.iImage = ( plink->m_hIcon ? m_oImages.Add( plink->m_hIcon ) : m_nImageUnknown );
+				item.iImage = ( plink->m_hIcon ? m_oImages.Add( plink->m_hIcon ) : m_nImageType[ LinkType::Unknown ] );
 			}
 			if ( item.mask & LVIF_TEXT )
 			{
@@ -607,10 +615,7 @@ void CSageLinksDlg::OnLvnGetdispinfoList(NMHDR *pNMHDR, LRESULT *pResult)
 		case COL_TYPE:
 			if ( item.mask & LVIF_IMAGE )
 			{
-				item.iImage =
-					( ( plink->m_nType == LinkType::Symbolic ) ? m_nImageSymbolic :
-					( ( plink->m_nType == LinkType::Junction ) ? m_nImageJunction :
-					( ( plink->m_nType == LinkType::Shortcut ) ? m_nImageShortcut : m_nImageUnknown ) ) );
+				item.iImage = m_nImageType[ plink->m_nType ];
 			}
 			break;
 
