@@ -10,14 +10,16 @@
 	#define vcredist_url	"https://aka.ms/vs/16/release/VC_redist.x86.exe"
 #endif
 
-#define vcdir ExtractFilePath(__PATHFILENAME__)
-#expr Exec( 'powershell', '-NoProfile -Command (New-Object System.Net.WebClient).DownloadFile(\"' + vcredist_url + '\",\"' + vcdir + '\' + vcredist_exe + '\")' )
+#define vcredist_path ExtractFilePath(__PATHFILENAME__) + '\' + vcredist_exe
+
+; Download file if not exists
+#expr Exec( 'powershell', '-NoProfile -Command if (!(Test-Path \"' + vcredist_path + '\")){(New-Object System.Net.WebClient).DownloadFile(\"' + vcredist_url + '\",\"' + vcredist_path + '\")}' )
 
 [Files]
 #if Platform == "x64"
-Source: "{#vcdir}\{#vcredist_exe}"; DestDir: "{tmp}"; Flags: deleteafterinstall 64bit; Check: IsWin64; AfterInstall: ExecTemp( '{#vcredist_exe}', '/passive /norestart' );
+Source: "{#vcredist_path}"; DestDir: "{tmp}"; Flags: deleteafterinstall 64bit; Check: IsWin64; AfterInstall: ExecTemp( '{#vcredist_exe}', '/passive /norestart' );
 #else
-Source: "{#vcdir}\{#vcredist_exe}"; DestDir: "{tmp}"; Flags: deleteafterinstall 32bit; AfterInstall: ExecTemp( '{#vcredist_exe}', '/passive /norestart' );
+Source: "{#vcredist_path}"; DestDir: "{tmp}"; Flags: deleteafterinstall 32bit; AfterInstall: ExecTemp( '{#vcredist_exe}', '/passive /norestart' );
 #endif
 
 [Code]
