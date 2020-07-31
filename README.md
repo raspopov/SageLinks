@@ -1,5 +1,7 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/xetag3g94r0rqk7m?svg=true)](https://ci.appveyor.com/project/raspopov/sagelinks)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/ab525a50b4604c9eb262df5376208773)](https://www.codacy.com/manual/raspopov/SageLinks?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=raspopov/SageLinks&amp;utm_campaign=Badge_Grade)
+[![GitHub All Releases](https://img.shields.io/github/downloads/raspopov/SageLinks/total)](https://github.com/raspopov/SageLinks/releases)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/raspopov/SageLinks)](https://github.com/raspopov/SageLinks/releases)
 
 SageLinks
 ---------------------
