@@ -18,7 +18,7 @@ Windows XP, Windows Vista, Windows 7, Windows 8, Windows 10 32/64-bit.
  License
 ------------
 
-Copyright (C) 2015-2020 Nikolay Raspopov <<raspopov@cherubicsoft.com>>
+Copyright (C) 2015-2022 Nikolay Raspopov <<raspopov@cherubicsoft.com>>
     
 This program is free software : you can redistribute it and / or modify
 it under the terms of the GNU General Public License as published by

@@ -2,30 +2,40 @@
 	#error "Platform" predefined variable must be defined (x64/Win32)
 #endif
 
-#if Platform == "x64"
-	#define vcredist_exe	"VC_redist.x64.exe"
-	#define vcredist_url	"https://aka.ms/vs/16/release/VC_redist.x64.exe"
-#else
-	#define vcredist_exe	"VC_redist.x86.exe"
-	#define vcredist_url	"https://aka.ms/vs/16/release/VC_redist.x86.exe"
-#endif
-
-#define vcredist_path ExtractFilePath(__PATHFILENAME__) + '\' + vcredist_exe
-
-; Download file if not exists
-#expr Exec( 'powershell', '-NoProfile -Command if (!(Test-Path \"' + vcredist_path + '\")){(New-Object System.Net.WebClient).DownloadFile(\"' + vcredist_url + '\",\"' + vcredist_path + '\")}' )
+#define VCDIR ExtractFilePath(__PATHFILENAME__)
 
 [Files]
 #if Platform == "x64"
-Source: "{#vcredist_path}"; DestDir: "{tmp}"; Flags: deleteafterinstall 64bit; Check: IsWin64; AfterInstall: ExecTemp( '{#vcredist_exe}', '/passive /norestart' );
+Source: "{#VCDIR}\vc_redist.x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall 64bit; Check: IsWin64; AfterInstall: ExecTemp( 'vc_redist.x64.exe', '/passive /norestart' );
 #else
-Source: "{#vcredist_path}"; DestDir: "{tmp}"; Flags: deleteafterinstall 32bit; AfterInstall: ExecTemp( '{#vcredist_exe}', '/passive /norestart' );
+Source: "{#VCDIR}\vc_redist.x86.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall 32bit; AfterInstall: ExecTemp( 'vc_redist.x86.exe', '/passive /norestart' );
 #endif
 
+#undef VCDIR
+
 [Code]
+var
+  NeedsRestart: Boolean;
+
 procedure ExecTemp(File, Params : String);
 var
-	nCode: Integer;
+	ResultCode: Integer;
 begin
-	Exec( ExpandConstant( '{tmp}' ) + '\' + File, Params, ExpandConstant( '{tmp}' ), SW_SHOW, ewWaitUntilTerminated, nCode );
+	Exec( ExpandConstant( '{tmp}' ) + '\' + File, Params, ExpandConstant( '{tmp}' ), SW_SHOW, ewWaitUntilTerminated, ResultCode );
+  if ResultCode = 3010 then begin
+    NeedsRestart := True;
+  end
+  else if ResultCode = 1638 then begin
+    // Alread installed
+  end
+  else if ResultCode <> 0 then begin
+    MsgBox( FmtMessage( SetupMessage( msgErrorFunctionFailed ), [ 'Microsoft Visual C++ Redistributable', IntToStr( ResultCode ) ] ), mbError, MB_OK );
+  end;
+	// Clean log files
+  DelTree( GetTempDir() + '\dd_vcredist*', false, true, false );
+end;
+
+function NeedRestart(): Boolean;
+begin
+  Result := NeedsRestart;
 end;

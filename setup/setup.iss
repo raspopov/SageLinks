@@ -13,7 +13,7 @@
 #define MyAppURL		    GetStringFileInfo( MyAppSource, "Comments" )
 #define MyOutputDir		  ExtractFileDir( TargetPath )
 #define MyOutput		    LowerCase( StringChange( MyAppName + " " + MyAppVersion + " " + MyBitness, " ", "_" ) )
-         
+
 #include "vcredist.iss"
 
 [Setup]

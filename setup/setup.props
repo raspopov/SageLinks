@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
+    <CustomBuildStep>
+      <Inputs>$(SolutionDir)setup\setup.iss;$(TargetPath);%(Inputs)</Inputs>
+      <Outputs>$(OutDir)Setup-Manifest.txt;%(Outputs)</Outputs>
+      <Message>Building setup...</Message>
+      <Command>
+cd "$(SolutionDir)"
+for /r %%i in (*iscc.exe) do set iscc="%%i"
+if "%iscc%"=="" ( echo Inno Setup not found! &amp;&amp; exit /b 1 )
+echo Using: %iscc%
+%iscc% "/DPlatform=$(Platform)" "/DTargetPath=$(TargetPath)" "$(SolutionDir)setup\setup.iss"
+	</Command>
+    </CustomBuildStep>
+	</ItemDefinitionGroup>
+</Project>
